@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Food Order - Customer</title>
+  <style>
+    :root{
+      --accent:#0ea5a4; --accent-2:#7c3aed; --muted:#6b7280; --card:#ffffff;
+      --glass: rgba(0,0,0,0.04);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background: #ffffff; color:#111827; -webkit-font-smoothing:antialiased;
+    }
+    .wrap{max-width:980px;margin:28px auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    h1{font-size:1.25rem;margin:0}
+    .small{font-size:0.9rem;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+    .card{
+      background:var(--card); border-radius:10px;padding:14px;border:1px solid rgba(15,23,42,0.04);
+      box-shadow:0 6px 18px rgba(11,15,26,0.02);
+      transition: transform .14s ease, box-shadow .14s ease;
+    }
+    .card:hover{ transform: translateY(-4px); box-shadow:0 18px 40px rgba(11,15,26,0.06); }
+    .menu-item{display:flex;flex-direction:column;gap:10px;border-radius:10px;padding:10px;border:1px solid rgba(15,23,42,0.03)}
+    .item-name{font-weight:700}
+    .price{font-weight:700;color:var(--accent)}
+    .select-row{display:flex;justify-content:space-between;align-items:center}
+    input.itm{width:18px;height:18px}
+    .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:0;color:white;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+    .btn.ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--accent);font-weight:700}
+    .order-summary{
+      position:fixed; left:50%; transform:translateX(-50%); bottom:18px; width:92%; max-width:980px;
+      display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;
+      background:#ffffff; border:1px solid rgba(15,23,42,0.06); box-shadow:0 12px 30px rgba(11,15,26,0.06);
+    }
+    .order-summary .muted{color:var(--muted)}
+    .ticket{
+      width:320px;padding:14px;border:2px dashed rgba(15,23,42,0.08);border-radius:10px;background:#fff;color:#111827;
+    }
+    .ticket h3{margin:0 0 8px 0}
+    @media print{
+      body *{visibility:hidden}
+      #printArea, #printArea *{visibility:visible}
+      #printArea{position:fixed;left:0;top:0;width:100%}
+      @page{size:portrait;margin:8mm}
+    }
+    .fade-in{animation:fadeIn .36s ease both}
+    @keyframes fadeIn{ from {opacity:0; transform:translateY(6px)} to {opacity:1; transform:none} }
+    .orders-list{display:flex;flex-direction:column;gap:10px}
+    .order-card{padding:10px;border-radius:10px;background:#fff;border:1px solid rgba(15,23,42,0.03)}
+    .right-align{text-align:right}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Food Orders</h1>
+        <div class="small">Pick items (one of each). See total and place order.</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div id="authInfo" class="small">Not signed in</div>
+        <button id="btnAuth" class="btn" style="margin-left:8px">Login / Create</button>
+        <button id="btnMyOrders" class="btn ghost" style="display:none">My Orders</button>
+        <button id="btnLogout" class="btn ghost" style="display:none">Logout</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="card fade-in">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <strong>Menu</strong>
+          <div class="small">Each item can be chosen once — pick multiple if you want.</div>
+        </div>
+
+        <div class="grid" id="menuGrid">
+          <!-- items injected by JS -->
+        </div>
+      </section>
+
+      <section id="userArea"></section>
+    </main>
+  </div>
+
+  <div id="printArea" style="display:none;padding:18px"></div>
+
+  <!-- audio: place pay.mp3 next to this file -->
+  <audio id="paySound" src="pay.mp3" preload="auto"></audio>
+
+  <!-- Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    // FIREBASE CONFIG (user-provided)
+    var firebaseConfig = {
+      apiKey: "AIzaSyBClhOYxDhLpQKPwurk1V3vsPXJ1Csew6E",
+      authDomain: "project-add05.firebaseapp.com",
+      databaseURL: "https://project-add05-default-rtdb.firebaseio.com",
+      projectId: "project-add05",
+      storageBucket: "project-add05.firebasestorage.app",
+      messagingSenderId: "321491234235",
+      appId: "1:321491234235:web:1f674625d9f129f2ef689e",
+      measurementId: "G-87M4WVB5Z8"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // APP STATE
+    const MENU = [
+      { id:'pizza', name:'Pizza', price:20 },
+      { id:'burger', name:'Burger', price:15 }
+    ]; // two items (user can pick both); change if needed
+    let selections = {}; // {id: true}
+    let currentUser = null;
+    let myOrdersRef = null; // holds Firebase ref for My Orders, so we can detach when closing
+
+    // HELPERS
+    function $(id){ return document.getElementById(id); }
+    function escapeKey(k){ return (k||'').toString().replace(/[.$#[\]]/g,'_'); }
+    function formatMoney(n){ return Number(n).toFixed(2).replace(/\.00$/,''); }
+    function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // INIT
+    document.addEventListener('DOMContentLoaded', ()=>{
+      try{ const s = localStorage.getItem('fo_user'); if(s) currentUser = JSON.parse(s); }catch(e){ localStorage.removeItem('fo_user'); }
+      renderMenu();
+      renderStickySummary();
+      updateAuthUI();
+      $('btnAuth').onclick = authFlow;
+      // toggle behavior for My Orders:
+      $('btnMyOrders').onclick = toggleMyOrders;
+      $('btnLogout').onclick = ()=>{ localStorage.removeItem('fo_user'); currentUser=null; updateAuthUI(); closeMyOrders(); showMessage('Logged out'); };
+    });
+
+    // RENDER MENU
+    function renderMenu(){
+      const grid = $('menuGrid'); grid.innerHTML = '';
+      MENU.forEach(item=>{
+        const card = document.createElement('div'); card.className = 'menu-item';
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="item-name">${escapeHtml(item.name)}</div>
+              <div class="small">Fresh & tasty</div>
+            </div>
+            <div class="price">${item.price} SAR</div>
+          </div>
+          <div class="select-row">
+            <label class="small"><input class="itm" type="checkbox" data-id="${item.id}" /> Add</label>
+            <div class="small">One per item</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+      document.querySelectorAll('input.itm').forEach(cb=>{
+        cb.addEventListener('change', e=>{
+          const id = e.target.dataset.id;
+          if(e.target.checked) selections[id] = true; else delete selections[id];
+          updateStickySummary();
+        });
+      });
+    }
+
+    // STICKY SUMMARY (bottom)
+    function renderStickySummary(){
+      const ss = document.createElement('div'); ss.className = 'order-summary'; ss.id = 'orderSummary';
+      ss.innerHTML = `
+        <div><span class="small">Selected:</span> <strong id="selCount">0</strong> &nbsp;&nbsp; <span class="small">Total:</span> <strong id="selTotal">0</strong> SAR</div>
+        <div><button id="btnOrderNow" class="btn" disabled>Order</button></div>
+      `;
+      document.body.appendChild(ss);
+      $('btnOrderNow').addEventListener('click', handleOrderClick);
+      updateStickySummary();
+    }
+
+    function updateStickySummary(){
+      const count = Object.keys(selections).length;
+      const total = Object.keys(selections).reduce((s,id)=>{
+        const it = MENU.find(m=>m.id===id); return s + (it?it.price:0);
+      }, 0);
+      $('selCount').textContent = count;
+      $('selTotal').textContent = formatMoney(total);
+      $('btnOrderNow').disabled = (count === 0);
+    }
+
+    // SIMPLE AUTH (DB-based)
+    function updateAuthUI(){
+      const ai = $('authInfo');
+      if(currentUser){
+        ai.textContent = 'Signed in: ' + currentUser.name;
+        $('btnAuth').style.display = 'none';
+        $('btnMyOrders').style.display = 'inline-block';
+        $('btnLogout').style.display = 'inline-block';
+      } else {
+        ai.textContent = 'Not signed in';
+        $('btnAuth').style.display = 'inline-block';
+        $('btnMyOrders').style.display = 'none';
+        $('btnLogout').style.display = 'none';
+        // also ensure My Orders closed
+        closeMyOrders();
+      }
+    }
+
+    function authFlow(){
+      const name = prompt('Username (no dots):'); if(!name) return;
+      const pw = prompt('Password (3+ chars):'); if(!pw || pw.length < 3){ alert('Password 3+ chars'); return; }
+      const ref = db.ref('users/' + escapeKey(name));
+      ref.once('value').then(snap=>{
+        if(snap.exists()){
+          const val = snap.val();
+          if(val.password !== pw){ alert('Wrong password'); return; }
+          currentUser = { name: name }; localStorage.setItem('fo_user', JSON.stringify(currentUser));
+          updateAuthUI(); showMessage('Signed in as ' + name);
+        } else {
+          ref.set({ name: name, password: pw }).then(()=>{
+            currentUser = { name: name }; localStorage.setItem('fo_user', JSON.stringify(currentUser));
+            updateAuthUI(); showMessage('Account created & signed in as ' + name);
+          });
+        }
+      }).catch(err=>{ alert('Auth error: '+err.message); });
+    }
+
+    // ORDER FLOW
+    function handleOrderClick(){
+      if(!currentUser){ alert('Please login or create an account first.'); return; }
+      const ids = Object.keys(selections);
+      if(ids.length === 0){ alert('Select at least one item'); return; }
+      const items = ids.map(id=>{
+        const it = MENU.find(m=>m.id===id);
+        return { id: it.id, name: it.name, price: it.price, qty: 1 };
+      });
+      const total = items.reduce((s,it)=> s + (it.price * it.qty), 0);
+      if(!confirm(`Confirm order for ${items.length} item(s). Total: ${formatMoney(total)} SAR?`)) return;
+
+      // play pay.mp3
+      const snd = $('paySound');
+      if(snd){ snd.currentTime = 0; snd.play().catch(()=>{}); }
+
+      // create incremental order number safely
+      const counterRef = db.ref('orderCounter');
+      counterRef.transaction(cur => (cur || 0) + 1, (err, committed, snap) => {
+        if(err || !committed){ alert('Could not create order number. Try again.'); return; }
+        const number = snap.val();
+        const orderId = 'order_' + number + '_' + Date.now();
+        const orderObj = {
+          number: number,
+          owner: currentUser.name,
+          items: items,
+          day: (new Date()).toLocaleDateString(),
+          status: 'pending',
+          createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        const updates = {};
+        updates['/orders/' + orderId] = orderObj;
+        updates['/users/' + escapeKey(currentUser.name) + '/orders/' + orderId] = orderObj;
+        db.ref().update(updates).then(()=>{
+          showMessage('Order placed — #' + number);
+          showTicketPreview(orderObj);
+          // reset selections
+          selections = {};
+          document.querySelectorAll('input.itm').forEach(cb=>cb.checked=false);
+          updateStickySummary();
+        }).catch(e=>{ alert('Save error: ' + e.message); });
+      });
+    }
+
+    // TICKET PREVIEW & PRINT (customers)
+    function buildTicketHtml(orderObj){
+      const total = (orderObj.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0);
+      const itemsHtml = (orderObj.items||[]).map(it=>`<li>${escapeHtml(it.name)} x ${it.qty} — ${it.price} SAR</li>`).join('');
+      return `
+        <div class="ticket">
+          <h3>Food Order Ticket</h3>
+          <div style="font-weight:700">Order #: ${orderObj.number}</div>
+          <div class="small">By: ${escapeHtml(orderObj.owner)}</div>
+          <div style="height:8px"></div>
+          <div><strong>Items</strong></div>
+          <ul style="margin:8px 0 0 18px;color:#111827">${itemsHtml}</ul>
+          <div style="margin-top:8px"><strong>Total: ${formatMoney(total)} SAR</strong></div>
+          <div style="margin-top:10px;display:flex;justify-content:flex-end">
+            <button id="printTicketBtn" class="btn">Print Ticket</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function showTicketPreview(orderObj){
+      const pa = $('printArea'); pa.style.display = 'block'; pa.innerHTML = buildTicketHtml(orderObj);
+      setTimeout(()=>{ const btn = $('printTicketBtn'); if(btn) btn.onclick = ()=>{ window.print(); setTimeout(()=>{ pa.style.display='none'; pa.innerHTML=''; },500); }; },50);
+      window.scrollTo({ top:0, behavior:'smooth' });
+    }
+
+    // MY ORDERS (toggle on/off)
+    function toggleMyOrders(){
+      if(!currentUser){ alert('Please login'); return; }
+      const ua = $('userArea');
+      if(ua.innerHTML.trim() !== ''){ // close
+        closeMyOrders();
+        return;
+      }
+      // open
+      showMyOrders();
+    }
+
+    function closeMyOrders(){
+      const ua = $('userArea');
+      ua.innerHTML = '';
+      $('btnMyOrders').textContent = 'My Orders';
+      if(myOrdersRef){ myOrdersRef.off(); myOrdersRef = null; }
+    }
+
+    function showMyOrders(){
+      if(!currentUser){ alert('Please login'); return; }
+      const ua = $('userArea'); ua.innerHTML = '';
+      const wrapper = document.createElement('section'); wrapper.className = 'card fade-in';
+      wrapper.innerHTML = `<h3>My Orders</h3><div id="ordersList" class="orders-list small">Loading...</div>`;
+      ua.appendChild(wrapper);
+      $('btnMyOrders').textContent = 'Close Orders';
+
+      const listEl = $('ordersList');
+      myOrdersRef = db.ref('users/' + escapeKey(currentUser.name) + '/orders');
+      myOrdersRef.on('value', snap=>{
+        const v = snap.val(); listEl.innerHTML = '';
+        if(!v){ listEl.innerHTML = '<div class="small">No orders yet.</div>'; return; }
+        const arr = Object.entries(v).sort((a,b)=>(a[1].number||0)-(b[1].number||0));
+        arr.forEach(([id, ord])=>{
+          const total = (ord.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0);
+          const block = document.createElement('div'); block.className = 'order-card';
+          block.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><strong>Order #${ord.number}</strong><div class="small">Status: ${escapeHtml(ord.status)}</div></div>
+              <div class="right-align">
+                <div class="small">Total: ${formatMoney(total)} SAR</div>
+                <div style="margin-top:6px"><button class="btn printMe" data-id="${id}">Print Ticket</button></div>
+              </div>
+            </div>
+            <div class="small" style="margin-top:8px">Items:<ul>${(ord.items||[]).map(i=>`<li>${escapeHtml(i.name)} x ${i.qty} — ${i.price} SAR</li>`).join('')}</ul></div>
+          `;
+          listEl.appendChild(block);
+        });
+
+        // wire print buttons
+        document.querySelectorAll('button.printMe').forEach(b=>{
+          b.onclick = e=>{
+            const id = e.target.getAttribute('data-id');
+            db.ref('users/' + escapeKey(currentUser.name) + '/orders/' + id).once('value').then(snap=>{
+              const ord = snap.val(); if(!ord) return;
+              const pa = $('printArea'); pa.style.display='block'; pa.innerHTML = buildTicketHtml(ord);
+              setTimeout(()=>{ window.print(); setTimeout(()=>{ pa.style.display='none'; pa.innerHTML=''; },500); },300);
+            });
+          };
+        });
+      });
+    }
+
+    // small toast
+    function showMessage(msg){
+      const t = document.createElement('div'); t.style.position='fixed'; t.style.right='18px'; t.style.bottom='110px';
+      t.style.background='linear-gradient(90deg,#0ea5a4,#7c3aed)'; t.style.color='white'; t.style.padding='10px 12px';
+      t.style.borderRadius='8px'; t.style.boxShadow='0 8px 26px rgba(2,6,23,0.12)'; t.style.zIndex=99999; t.textContent = msg;
+      document.body.appendChild(t); setTimeout(()=> t.style.opacity='0', 2200); setTimeout(()=> t.remove(), 2600);
+    }
+  </script>
+</body>
+</html>
