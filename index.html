@@ -2,111 +2,264 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Food Order - Customer</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Food Order - Animated Mobile UI (Blue Glow Selection)</title>
 
-  <!-- PWA / iOS metadata -->
-  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0ea5a4">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Food Orders">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <!-- Replace with your icon(s) -->
   <link rel="apple-touch-icon" href="pizza.jpeg">
 
   <style>
+    /* ---------------------------
+       Design tokens & motion (mobile-first)
+       --------------------------- */
     :root{
-      --accent:#0ea5a4; --accent-2:#7c3aed; --muted:#6b7280; --card:#ffffff;
+      --accent: #0ea5a4; --accent-2: #7c3aed; --muted: #6b7280; --card:#ffffff;
       --glass: rgba(0,0,0,0.04);
+      --dur-fast: 240ms; --dur-med: 480ms; --dur-slow: 920ms;
+      --press-down: 420ms;  /* slower down press */
+      --press-up: 700ms;    /* slower up release */
+      --shadow-1: 0 8px 26px rgba(11,15,26,0.06);
+      --shadow-2: 0 28px 70px rgba(11,15,26,0.10);
+      --tap-translate: 8px; /* how much the button 'pushes' down */
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
+
+      /* stronger, more visible blue glow */
+      --blue-glow-strong: rgba(0, 210, 255, 0.22);
+      --blue-glow-soft: rgba(0, 210, 255, 0.10);
+      --blue-inner: rgba(0, 210, 255, 0.08);
     }
+
+    @media (prefers-reduced-motion: reduce){
+      * { transition-duration: 0s !important; animation-duration: 0s !important; scroll-behavior: auto !important; }
+    }
+
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{
-      margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-      background: #ffffff; color:#111827; -webkit-font-smoothing:antialiased;
+      margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:linear-gradient(180deg,#fbfdfe 0%, #f7fbfb 36%); color:#071126; -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale; -webkit-overflow-scrolling:touch; -ms-touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(0,0,0,0);
     }
-    .wrap{max-width:980px;margin:28px auto;padding:20px}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-    h1{font-size:1.25rem;margin:0}
-    .small{font-size:0.9rem;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+
+    .wrap{max-width:980px;margin:20px auto;padding:16px; padding-top: calc(16px + var(--safe-top));}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; gap:12px;flex-wrap:wrap}
+    h1{font-size:1.15rem;margin:0;display:flex;align-items:center;gap:10px;line-height:1.05}
+    .brand-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;box-shadow:var(--shadow-1);transform:translateZ(0);font-weight:800}
+    .small{font-size:0.92rem;color:var(--muted)}
+
+    .hero-deco{position:absolute;right:12px;top:6px;width:220px;height:120px;pointer-events:none;opacity:0.12;filter:blur(14px);mix-blend-mode:screen; transform: translateZ(0) translateY(0); transition: transform var(--dur-slow) ease-out; will-change:transform }
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+
     .card{
-      background:var(--card); border-radius:10px;padding:14px;border:1px solid rgba(15,23,42,0.04);
-      box-shadow:0 6px 18px rgba(11,15,26,0.02);
-      transition: transform .14s ease, box-shadow .14s ease;
+      background:var(--card); border-radius:14px;padding:14px;border:1px solid rgba(15,23,42,0.04); box-shadow:var(--shadow-1); transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease, border-color var(--dur-fast);
+      will-change: transform, box-shadow;
     }
-    .card:hover{ transform: translateY(-4px); box-shadow:0 18px 40px rgba(11,15,26,0.06); }
-    .menu-item{display:flex;flex-direction:column;gap:10px;border-radius:10px;padding:10px;border:1px solid rgba(15,23,42,0.03)}
-    .item-name{font-weight:700}
-    .price{font-weight:700;color:var(--accent)}
+    .card:hover{ transform: translateY(-8px) scale(1.003); box-shadow:var(--shadow-2); border-color: rgba(15,23,42,0.06); }
+
+    /* MENU ITEM (acts like a button) */
+    .menu-item{
+      display:flex;flex-direction:column;gap:10px;border-radius:14px;padding:14px;border:1px solid rgba(15,23,42,0.02); background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.56));
+      backdrop-filter: blur(6px); transition: transform var(--dur-med) cubic-bezier(.2,.9,.3,1), box-shadow var(--dur-med), border-color var(--dur-med);
+      position:relative; overflow:visible; cursor:pointer; touch-action:manipulation;
+      will-change: transform, box-shadow;
+      min-height:84px;
+    }
+    .menu-item[role="button"]{ outline: none; }
+    .menu-item.enter{animation:popIn var(--dur-med) cubic-bezier(.2,.9,.3,1) both}
+    @keyframes popIn{ from { opacity:0; transform: translateY(10px) scale(.995) } to { opacity:1; transform:none } }
+
+    .item-name{font-weight:800; text-transform:capitalize; font-size:1.03rem}
+    .price{font-weight:900;color:var(--accent); font-size:1rem}
     .select-row{display:flex;justify-content:space-between;align-items:center}
-    input.itm{width:18px;height:18px}
-    .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:0;color:white;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700}
-    .btn.ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--accent);font-weight:700}
+
+    /* Pressed states */
+    .btn{
+      -webkit-user-select:none; user-select:none;
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border:0;color:white;padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800; font-size:1rem;
+      box-shadow:0 10px 30px rgba(14,30,70,0.10); transition: transform var(--press-up) cubic-bezier(.2,.9,.3,1), box-shadow var(--press-up), filter var(--press-up);
+      background:linear-gradient(90deg,var(--accent),var(--accent-2)); transform-origin:center;
+      will-change: transform;
+      touch-action: manipulation;
+    }
+    .btn.ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--accent);font-weight:800;box-shadow:none}
+
+    .btn.pressed{
+      animation: btnDown var(--press-down) cubic-bezier(.25,.85,.25,1) forwards;
+      box-shadow: 0 6px 18px rgba(14,30,70,0.08);
+    }
+    .btn.pressed.up{
+      animation: btnUp var(--press-up) cubic-bezier(.22,.9,.28,1) forwards;
+    }
+    @keyframes btnDown{ from { transform: translateY(0) scale(1) } to { transform: translateY(var(--tap-translate)) scale(.994) } }
+    @keyframes btnUp{ from { transform: translateY(var(--tap-translate)) scale(.994) } to { transform: translateY(0) scale(1) } }
+
+    .menu-item.pressed{
+      transition: none;
+      transform: translateY(var(--tap-translate)) scale(.997);
+      box-shadow: 0 8px 22px rgba(2,6,23,0.06);
+    }
+    .menu-item.up{
+      transition: transform var(--press-up) cubic-bezier(.22,.9,.28,1), box-shadow var(--press-up);
+      transform: translateY(0) scale(1);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* STRONGER BLUE GLOW + subtle pulse */
+    .menu-item::before{
+      content: "";
+      position: absolute;
+      left: -8px; right: -8px; top: -8px; bottom: -8px;
+      border-radius: 20px;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      transform: scale(0.98);
+      transition: opacity var(--dur-med) cubic-bezier(.2,.9,.3,1), transform var(--dur-med) cubic-bezier(.2,.9,.3,1);
+      background:
+        radial-gradient(50% 50% at 10% 10%, var(--blue-glow-strong), transparent 18%),
+        radial-gradient(50% 50% at 90% 90%, var(--blue-glow-strong), transparent 28%),
+        linear-gradient(90deg, rgba(0,210,255,0.06), rgba(124,58,237,0.03));
+      filter: blur(14px);
+      mix-blend-mode: screen;
+    }
+
+    .menu-item.selected{
+      z-index: 3;
+      border: 2px solid rgba(0,210,255,0.22);
+      box-shadow: 0 24px 60px rgba(0,210,255,0.10);
+    }
+
+    .menu-item.selected::before{
+      opacity: 1;
+      transform: scale(1.02);
+      animation: glowPulse 1400ms ease-in-out infinite;
+    }
+
+    @keyframes glowPulse {
+      0% { filter: blur(12px); opacity: 0.92; transform: scale(1.00); }
+      50% { filter: blur(20px); opacity: 1; transform: scale(1.03); }
+      100% { filter: blur(12px); opacity: 0.92; transform: scale(1.00); }
+    }
+
+    /* inner highlight */
+    .menu-item .inner-highlight{
+      position:absolute; inset:8px; border-radius:10px; z-index:1; pointer-events:none;
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,0.03);
+      transition: box-shadow var(--dur-med) cubic-bezier(.2,.9,.3,1), background var(--dur-med);
+    }
+    .menu-item.selected .inner-highlight{
+      box-shadow: inset 0 0 0 3px var(--blue-inner);
+      background: linear-gradient(180deg, rgba(255,255,255,0.00), rgba(255,255,255,0.00));
+    }
+
+    .menu-item > .content { position: relative; z-index: 2; }
+
+    /* sticky order summary - slide + fade smoothly */
     .order-summary{
-      position:fixed; left:50%; transform:translateX(-50%); bottom:18px; width:92%; max-width:980px;
-      display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;
-      background:#ffffff; border:1px solid rgba(15,23,42,0.06); box-shadow:0 12px 30px rgba(11,15,26,0.06);
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%) translateY(60px) scale(0.99);
+      bottom:calc(-260px + var(--safe-bottom));
+      width:92%;
+      max-width:980px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:16px;
+      border-radius:18px;
+      background:linear-gradient(180deg,#ffffff, #f3fdff);
+      border:1px solid rgba(0,210,255,0.10);
+      box-shadow: 0 36px 90px rgba(0,210,255,0.06);
+      transition:
+        transform var(--dur-med) cubic-bezier(.2,.9,.3,1),
+        bottom var(--dur-med) cubic-bezier(.2,.9,.3,1),
+        opacity var(--dur-fast) ease,
+        box-shadow var(--dur-med) ease;
+      z-index:10000;
+      will-change: transform, opacity;
+      gap:12px;
+      opacity:0;
+      pointer-events:none;
     }
+    /* Visible state — centered and lifted into view */
+    .order-summary.visible{
+      bottom:calc(18px + var(--safe-bottom));
+      transform:translateX(-50%) translateY(0) scale(1);
+      opacity:1;
+      pointer-events:auto;
+      box-shadow: 0 42px 110px rgba(0,210,255,0.10);
+    }
+
     .order-summary .muted{color:var(--muted)}
-    .ticket{
-      width:320px;padding:14px;border:2px dashed rgba(15,23,42,0.08);border-radius:10px;background:#fff;color:#111827;
-    }
+    .count-badge{ display:inline-block; min-width:34px; padding:8px 10px; border-radius:999px; background:linear-gradient(90deg,var(--accent-2),var(--accent)); color:white; font-weight:900; text-align:center; box-shadow:0 12px 30px rgba(0,0,0,0.08); font-size:0.92rem }
+
+    .ticket{ width:320px;padding:14px;border-radius:12px;background:linear-gradient(180deg,#fff,#fbfbff); border:1px dashed rgba(15,23,42,0.08); box-shadow:0 8px 30px rgba(2,6,23,0.04); }
     .ticket h3{margin:0 0 8px 0}
-    @media print{
-      body *{visibility:hidden}
-      #printArea, #printArea *{visibility:visible}
-      #printArea{position:fixed;left:0;top:0;width:100%}
-      @page{size:portrait;margin:8mm}
-    }
-    .fade-in{animation:fadeIn .36s ease both}
-    @keyframes fadeIn{ from {opacity:0; transform:translateY(6px)} to {opacity:1; transform:none} }
+
+    @media print{ body *{visibility:hidden} #printArea, #printArea *{visibility:visible} #printArea{position:fixed;left:0;top:0;width:100%} @page{size:portrait;margin:8mm} }
+
+    .fade-in{animation:fadeIn var(--dur-med) cubic-bezier(.2,.9,.3,1) both}
+    @keyframes fadeIn{ from {opacity:0; transform:translateY(8px)} to {opacity:1; transform:none} }
+
     .orders-list{display:flex;flex-direction:column;gap:10px}
-    .order-card{padding:10px;border-radius:10px;background:#fff;border:1px solid rgba(15,23,42,0.03)}
+    .order-card{padding:12px;border-radius:12px;background:#fff;border:1px solid rgba(15,23,42,0.03); box-shadow:var(--shadow-1)}
     .right-align{text-align:right}
 
-    /* Install button top-left */
-    #btnAddHome{
-      position:fixed; left:12px; top:12px; z-index:9999; border-radius:9px; padding:8px 10px; font-weight:700;
-      box-shadow:0 6px 20px rgba(2,6,23,0.12); display:flex; gap:8px; align-items:center;
-      background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:white; border:0; cursor:pointer;
-    }
+    #btnAddHome{ position:fixed; left:12px; top:calc(12px + var(--safe-top)); z-index:9999; border-radius:12px; padding:10px 12px; font-weight:800; box-shadow:0 12px 36px rgba(2,6,23,0.14); display:flex; gap:8px; align-items:center; background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:white; border:0; cursor:pointer; transform:translateZ(0); touch-action:manipulation; }
 
-    /* tutorial modal */
-    .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; z-index:100000; }
-    .modal{ width:92%; max-width:520px; background:white; padding:18px; border-radius:12px; box-shadow:0 18px 40px rgba(11,15,26,0.12) }
-    .modal h3{ margin:0 0 8px 0 }
-    .steps{ margin-top:8px }
-    .steps li{ margin-bottom:8px }
-    .close-x{ position:absolute; right:18px; top:18px; background:transparent; border:0; font-weight:700; font-size:16px; color:#666; cursor:pointer; }
+    .modal-backdrop{ position:fixed; inset:0; background:rgba(2,6,23,0.45); display:flex; align-items:center; justify-content:center; z-index:100000; padding:18px; }
+    .modal{ width:94%; max-width:520px; background:linear-gradient(180deg,#ffffff,#f8fbff); padding:18px; border-radius:14px; box-shadow:0 40px 100px rgba(2,6,23,0.28); transform-origin:center; animation:modalIn var(--dur-slow) cubic-bezier(.2,.9,.3,1) both }
+    @keyframes modalIn{ from{ opacity:0; transform:translateY(18px) scale(.98) } to { opacity:1; transform:none } }
+    .close-x{ position:absolute; right:18px; top:18px; background:transparent; border:0; font-weight:800; font-size:16px; color:#666; cursor:pointer; }
+
+    .menu-item:focus { box-shadow: 0 12px 36px rgba(2,6,23,0.06); transform: translateY(-6px); border-color: rgba(0,210,255,0.08); outline: none; }
+    :focus{ outline: 3px solid rgba(14,30,70,0.06); outline-offset: 3px; border-radius:8px; }
+
+    @media(min-width:720px){
+      .wrap{ padding:28px; }
+      h1{ font-size:1.25rem }
+      .btn{ padding:12px 18px; font-size:1rem }
+      .menu-item{ padding:16px }
+    }
   </style>
 </head>
 <body>
-  <!-- Add to home / Install button (top-left) -->
   <button id="btnAddHome" title="Add to home screen">➕ Add to Home</button>
 
   <div class="wrap">
     <header>
-      <div>
-        <h1>Food Orders</h1>
-        <div class="small">Pick items (one of each). See total and place order.</div>
+      <div style="position:relative">
+        <div class="brand-badge" aria-hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 L15 8 L22 9 L17 14 L18 21 L12 18 L6 21 L7 14 L2 9 L9 8 Z" fill="white" opacity="0.12"></path></svg>
+          <span>Food Orders</span>
+        </div>
+
+        <h1 style="margin-top:10px">Order your favourites <span class="small" style="margin-left:8px">— animated UI</span></h1>
       </div>
+
       <div style="display:flex;gap:8px;align-items:center">
         <div id="authInfo" class="small">Not signed in</div>
-        <button id="btnAuth" class="btn" style="margin-left:8px">Login / Create</button>
+        <button id="btnAuth" class="btn btn-animated" style="margin-left:8px">Login / Create</button>
         <button id="btnMyOrders" class="btn ghost" style="display:none">My Orders</button>
         <button id="btnLogout" class="btn ghost" style="display:none">Logout</button>
       </div>
     </header>
 
     <main>
-      <section class="card fade-in">
+      <section class="card fade-in" aria-labelledby="menuTitle">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <strong>Menu</strong>
-          <div class="small">Each item can be chosen once — pick multiple if you want.</div>
+          <strong id="menuTitle">Menu</strong>
+          <div class="small">Tap an item to select it — selected items get a visible blue glow.</div>
         </div>
 
-        <div class="grid" id="menuGrid"></div>
+        <div class="grid" id="menuGrid" role="list"></div>
       </section>
 
       <section id="userArea"></section>
@@ -116,7 +269,7 @@
   <div id="printArea" style="display:none;padding:18px"></div>
   <audio id="paySound" src="pay.mp3" preload="auto"></audio>
 
-  <!-- Firebase v8 -->
+  <!-- Firebase v8 (unchanged) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -135,12 +288,8 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // webhook setup: replace with your webhook or call your server endpoint.
-    // NOTE: direct browser POST to Discord webhook may be blocked by CORS.
-    // It's safer to call your own server or Firebase Function which forwards the webhook.
     const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1415693152651841566/pKKWSwqxR90q-XwObpAJMG8-sX8UUttJH259EouYRcYxojibU6KJO1gMHaXd9a4E0H5w';
 
-    // APP STATE
     const MENU = [
       { id:'falafel', name:'falafel', price:20 },
       { id:'mandy', name:'mandy', price:30 },
@@ -152,231 +301,203 @@
     ];
     let selections = {};
     let currentUser = null;
-
-    // PWA install prompt - saved event for Android
     let deferredPrompt = null;
 
-    // HELPERS
     function $(id){ return document.getElementById(id); }
     function escapeKey(k){ return (k||'').toString().replace(/[.$#[\]]/g,'_'); }
     function formatMoney(n){ return Number(n).toFixed(2).replace(/\.00$/,''); }
     function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 
-    // INIT
+    function tryPlay(el){ if(!el) return; try{ el.currentTime = 0; el.play().catch(()=>{}); }catch(e){} }
+
+    // tactile helper attaches slow press-down/up animations for touch & mouse & keyboard
+    function attachTactile(el) {
+      if(!el) return;
+      let down = false;
+      const downNow = (ev) => {
+        if(down) return;
+        down = true;
+        el.classList.remove('up');
+        el.classList.add('pressed');
+      };
+      const upNow = (ev) => {
+        if(!down) return;
+        down = false;
+        el.classList.remove('pressed');
+        el.classList.add('up');
+        setTimeout(()=> el.classList.remove('up'), 820);
+      };
+
+      el.addEventListener('touchstart', downNow, {passive:true});
+      el.addEventListener('mousedown', downNow);
+      el.addEventListener('touchend', upNow, {passive:true});
+      el.addEventListener('mouseup', upNow);
+      el.addEventListener('mouseleave', upNow);
+      el.addEventListener('touchcancel', upNow);
+
+      el.addEventListener('keydown', (e)=>{ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); downNow(); }});
+      el.addEventListener('keyup', (e)=>{ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); upNow(); el.click && el.click(); }});
+    }
+
     document.addEventListener('DOMContentLoaded', ()=>{
       try{ const s = localStorage.getItem('fo_user'); if(s) currentUser = JSON.parse(s); }catch(e){ localStorage.removeItem('fo_user'); }
-      renderMenu(); renderStickySummary(); updateAuthUI();
+      renderMenu(); renderStickySummary(); updateAuthUI(); animateEntrance();
       $('btnAuth').onclick = authFlow;
       $('btnMyOrders').onclick = showMyOrders;
       $('btnLogout').onclick = ()=>{ localStorage.removeItem('fo_user'); currentUser=null; updateAuthUI(); showMessage('Logged out'); };
       $('btnAddHome').onclick = openInstallTutorial;
 
-      // register service worker
-      if('serviceWorker' in navigator){
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-          console.log('SW registered', reg);
-        }).catch(err => console.warn('SW reg failed', err));
-      }
+      // tactile attach for existing buttons
+      document.querySelectorAll('.btn').forEach(b => attachTactile(b));
 
-      // beforeinstallprompt support (Android/Chrome)
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        // show "Install" in our tutorial UI when user opens it
-        // optionally indicate availability to user (like change button text)
-        $('btnAddHome').textContent = '▸ Install App';
-      });
+      if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').then(reg => { console.log('SW registered', reg); }).catch(err => console.warn('SW reg failed', err)); }
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; $('btnAddHome').textContent = '▸ Install App'; });
+
+      // keep hero deco parallax but DO NOT show order summary on scroll
+      window.addEventListener('scroll', ()=>{ const deco = document.querySelector('.hero-deco'); if(!deco) return; const t = Math.min(60, window.scrollY/6); deco.style.transform = `translateY(${t}px) translateZ(0)`; });
     });
 
-    // RENDER MENU
+    // render menu (NO checkboxes) - clicking toggles selection; selection shows blue glow
     function renderMenu(){
       const grid = $('menuGrid'); grid.innerHTML = '';
-      MENU.forEach(item=>{
-        const card = document.createElement('div'); card.className = 'menu-item';
+      MENU.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'menu-item';
+        card.setAttribute('role','button');
+        card.setAttribute('tabindex','0');
+        card.dataset.id = item.id;
+
         card.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div class="item-name">${escapeHtml(item.name)}</div>
-              <div class="small">Fresh & tasty</div>
+          <div class="content">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div class="item-name">${escapeHtml(item.name)}</div>
+                <div class="small">Fresh & tasty</div>
+              </div>
+              <div style="text-align:right">
+                <div class="price">${item.price} SAR</div>
+                <div class="small" style="margin-top:6px">Tap to choose</div>
+              </div>
             </div>
-            <div class="price">${item.price} SAR</div>
+            <div style="height:8px"></div>
           </div>
-          <div class="select-row">
-            <label class="small"><input class="itm" type="checkbox" data-id="${item.id}" /> Add</label>
-            <div class="small">One per item</div>
-          </div>
+          <div class="inner-highlight"></div>
         `;
+
         grid.appendChild(card);
-      });
-      document.querySelectorAll('input.itm').forEach(cb=>{
-        cb.addEventListener('change', e=>{
-          const id = e.target.dataset.id;
-          if(e.target.checked) selections[id] = true; else delete selections[id];
+
+        // entrance stagger
+        setTimeout(()=> { card.classList.add('enter'); card.style.opacity = 1; card.style.transform = 'none'; }, idx * 80);
+
+        // tactile press feel
+        attachTactile(card);
+
+        // toggle selection (multi-select)
+        card.addEventListener('click', () => {
+          const id = card.dataset.id;
+          const isSelected = !!selections[id];
+          if(isSelected){
+            delete selections[id];
+            card.classList.remove('selected');
+          } else {
+            selections[id] = true;
+            card.classList.add('selected');
+          }
           updateStickySummary();
         });
       });
     }
 
-    // STICKY SUMMARY (bottom)
+    function updateStickySummary(){
+      const count = Object.keys(selections).length;
+      const total = Object.keys(selections).reduce((s, id) => {
+        const it = MENU.find(m => m.id === id);
+        return s + (it ? it.price : 0);
+      }, 0);
+      const selCount = $('selCount'); const selTotal = $('selTotal');
+      if(selCount) selCount.textContent = count;
+      if(selTotal) selTotal.textContent = formatMoney(total);
+      const orderBtn = $('btnOrderNow'); if(orderBtn) orderBtn.disabled = (count === 0);
+
+      // show/hide the sticky summary immediately based on selection count (CSS handles smooth slide/fade)
+      const os = $('orderSummary');
+      if(os){
+        if(count > 0) {
+          os.classList.add('visible');
+        } else {
+          os.classList.remove('visible');
+        }
+      }
+
+      // subtle pulse on the count badge
+      const b = $('selCount'); if(b){ b.animate([{ transform:'scale(1.06)' }, { transform:'scale(1)' }], { duration:320, easing:'cubic-bezier(.2,.9,.3,1)' }); }
+    }
+
+    // sticky summary render
     function renderStickySummary(){
       const ss = document.createElement('div'); ss.className = 'order-summary'; ss.id = 'orderSummary';
       ss.innerHTML = `
-        <div><span class="small">Selected:</span> <strong id="selCount">0</strong> &nbsp;&nbsp; <span class="small">Total:</span> <strong id="selTotal">0</strong> SAR</div>
-        <div><button id="btnOrderNow" class="btn" disabled>Order</button></div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:10px"><span class="small">Selected:</span> <strong id="selCount" class="count-badge">0</strong></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="small">Total:</span> <strong id="selTotal">0</strong> SAR</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="btnOrderNow" class="btn btn-animated">Order</button>
+        </div>
       `;
       document.body.appendChild(ss);
       $('btnOrderNow').addEventListener('click', handleOrderClick);
+      attachTactile($('btnOrderNow'));
       updateStickySummary();
     }
 
-    function updateStickySummary(){
-      const count = Object.keys(selections).length;
-      const total = Object.keys(selections).reduce((s,id)=>{
-        const it = MENU.find(m=>m.id===id); return s + (it?it.price:0);
-      }, 0);
-      $('selCount').textContent = count;
-      $('selTotal').textContent = formatMoney(total);
-      $('btnOrderNow').disabled = (count === 0);
-    }
+    // Auth + Order flows kept same as before (unchanged logic)
+    function updateAuthUI(){ const ai = $('authInfo'); if(currentUser){ ai.textContent = 'Signed in: ' + currentUser.name; $('btnAuth').style.display = 'none'; $('btnMyOrders').style.display = 'inline-block'; $('btnLogout').style.display = 'inline-block'; } else { ai.textContent = 'Not signed in'; $('btnAuth').style.display = 'inline-block'; $('btnMyOrders').style.display = 'none'; $('btnLogout').style.display = 'none'; } }
 
-    // Ask day helper (validates input)
-    function askDay(){
-      const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday'];
-      let tries = 0;
-      while(tries < 3){
-        let raw = prompt('Which day do you want it? (Sunday, Monday, Tuesday, Wednesday or Thursday)');
-        if(raw === null) return null;
-        raw = raw.trim().toLowerCase();
-        if(!raw) { tries++; alert('Please enter a day.'); continue; }
-        const match = DAYS.find(d=>{
-          const low = d.toLowerCase();
-          return low === raw || low.startsWith(raw) || low.startsWith(raw.slice(0,3));
-        });
-        if(match) return match;
-        tries++;
-        alert('Invalid day. Please enter Sunday, Monday, Tuesday, Wednesday or Thursday.');
-      }
-      return null;
-    }
+    function authFlow(){ const name = prompt('Username (no dots):'); if(!name) return; const pw = prompt('Password (3+ chars):'); if(!pw || pw.length < 3){ alert('Password 3+ chars'); return; } const ref = db.ref('users/' + escapeKey(name)); ref.once('value').then(snap=>{ if(snap.exists()){ const val = snap.val(); if(val.password !== pw){ alert('Wrong password'); return; } currentUser = { name: name }; localStorage.setItem('fo_user', JSON.stringify(currentUser)); updateAuthUI(); showMessage('Signed in as ' + name); } else { ref.set({ name: name, password: pw }).then(()=>{ currentUser = { name: name }; localStorage.setItem('fo_user', JSON.stringify(currentUser)); updateAuthUI(); showMessage('Account created & signed in as ' + name); }); } }).catch(err=>{ alert('Auth error: '+err.message); }); }
 
-    // SIMPLE AUTH (DB-based)
-    function updateAuthUI(){
-      const ai = $('authInfo');
-      if(currentUser){
-        ai.textContent = 'Signed in: ' + currentUser.name;
-        $('btnAuth').style.display = 'none';
-        $('btnMyOrders').style.display = 'inline-block';
-        $('btnLogout').style.display = 'inline-block';
-      } else {
-        ai.textContent = 'Not signed in';
-        $('btnAuth').style.display = 'inline-block';
-        $('btnMyOrders').style.display = 'none';
-        $('btnLogout').style.display = 'none';
-      }
-    }
+    function askDay(){ const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday']; let tries = 0; while(tries < 3){ let raw = prompt('Which day do you want it? (Sunday, Monday, Tuesday, Wednesday or Thursday)'); if(raw === null) return null; raw = raw.trim().toLowerCase(); if(!raw) { tries++; alert('Please enter a day.'); continue; } const match = DAYS.find(d=>{ const low = d.toLowerCase(); return low === raw || low.startsWith(raw) || low.startsWith(raw.slice(0,3)); }); if(match) return match; tries++; alert('Invalid day. Please enter Sunday, Monday, Tuesday, Wednesday or Thursday.'); } return null; }
 
-    function authFlow(){
-      const name = prompt('Username (no dots):'); if(!name) return;
-      const pw = prompt('Password (3+ chars):'); if(!pw || pw.length < 3){ alert('Password 3+ chars'); return; }
-      const ref = db.ref('users/' + escapeKey(name));
-      ref.once('value').then(snap=>{
-        if(snap.exists()){
-          const val = snap.val();
-          if(val.password !== pw){ alert('Wrong password'); return; }
-          currentUser = { name: name }; localStorage.setItem('fo_user', JSON.stringify(currentUser));
-          updateAuthUI(); showMessage('Signed in as ' + name);
-        } else {
-          ref.set({ name: name, password: pw }).then(()=>{
-            currentUser = { name: name }; localStorage.setItem('fo_user', JSON.stringify(currentUser));
-            updateAuthUI(); showMessage('Account created & signed in as ' + name);
-          });
-        }
-      }).catch(err=>{ alert('Auth error: '+err.message); });
-    }
-
-    // ORDER FLOW
-    function handleOrderClick(){
+    async function handleOrderClick(){
       if(!currentUser){ alert('Please login or create an account first.'); return; }
       const ids = Object.keys(selections);
       if(ids.length === 0){ alert('Select at least one item'); return; }
-
-      const chosenDay = askDay();
-      if(!chosenDay){ alert('Order cancelled (no day selected).'); return; }
-
-      const items = ids.map(id=>{
-        const it = MENU.find(m=>m.id===id);
-        return { id: it.id, name: it.name, price: it.price, qty: 1 };
-      });
+      const chosenDay = askDay(); if(!chosenDay){ alert('Order cancelled (no day selected).'); return; }
+      const items = ids.map(id=>{ const it = MENU.find(m=>m.id===id); return { id: it.id, name: it.name, price: it.price, qty: 1 }; });
       const total = items.reduce((s,it)=> s + (it.price * it.qty), 0);
       if(!confirm(`Confirm order for ${items.length} item(s) on ${chosenDay}. Total: ${formatMoney(total)} SAR?`)) return;
 
-      // play pay.mp3
-      const snd = $('paySound'); if(snd){ snd.currentTime = 0; snd.play().catch(()=>{}); }
+      tryPlay($('paySound'));
 
-      // create incremental order number safely via transaction
       const counterRef = db.ref('orderCounter');
       counterRef.transaction(cur => (cur || 0) + 1, (err, committed, snap) => {
         if(err || !committed){ alert('Could not create order number. Try again.'); return; }
         const number = snap.val();
         const orderId = 'order_' + number + '_' + Date.now();
-        const orderObj = {
-          number: number,
-          owner: currentUser.name,
-          items: items,
-          day: chosenDay,
-          status: 'pending',
-          createdAt: firebase.database.ServerValue.TIMESTAMP
-        };
+        const orderObj = { number: number, owner: currentUser.name, items: items, day: chosenDay, status: 'pending', createdAt: firebase.database.ServerValue.TIMESTAMP };
         const updates = {};
         updates['/orders/' + orderId] = orderObj;
         updates['/users/' + escapeKey(currentUser.name) + '/orders/' + orderId] = orderObj;
         db.ref().update(updates).then(()=>{
           showMessage('Order placed — #' + number);
           showTicketPreview(orderObj);
-          // reset selections
+          // clear selections and UI
           selections = {};
-          document.querySelectorAll('input.itm').forEach(cb=>cb.checked=false);
+          document.querySelectorAll('.menu-item.selected').forEach(el => el.classList.remove('selected'));
           updateStickySummary();
-
-          // SEND DISCORD WEBHOOK (attempt client-side)
-          try {
-            sendDiscordWebhook(orderObj, number, total);
-          } catch(e){
-            console.warn('Webhook send failed', e);
-          }
+          try { sendDiscordWebhook(orderObj, number, total); } catch(e){ console.warn('Webhook send failed', e); }
         }).catch(e=>{ alert('Save error: ' + e.message); });
       });
     }
 
-    // Attempt to send to Discord webhook from browser.
-    // NOTE: This may be blocked by CORS on Discord. If that happens, deploy the server-side Firebase function supplied below
-    // and replace DISCORD_WEBHOOK with your function endpoint URL.
-    function sendDiscordWebhook(orderObj, number, total){
-      if(!DISCORD_WEBHOOK || DISCORD_WEBHOOK.includes('REPLACE_WITH')) {
-        console.warn('Discord webhook not configured.');
-        return;
-      }
+    function sendDiscordWebhook(orderObj, number, total){ if(!DISCORD_WEBHOOK || DISCORD_WEBHOOK.includes('REPLACE_WITH')) { console.warn('Discord webhook not configured.'); return; }
       const itemsText = (orderObj.items||[]).map(i=>`${i.name} x${i.qty} (${i.price} SAR)`).join('\n');
-      const payload = {
-        content: `📣 New order placed — #${number}\nBy: ${orderObj.owner}\nFor: ${orderObj.day}\nTotal: ${formatMoney(total)} SAR\n\nItems:\n${itemsText}`
-      };
-      fetch(DISCORD_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).then(r=>{
-        if(!r.ok) console.warn('Webhook returned non-OK', r.status);
-      }).catch(err=>{
-        console.warn('Webhook send error (likely CORS). Consider using server-side forwarding.', err);
-      });
-    }
+      const payload = { content: `📣 New order placed — #${number}\nBy: ${orderObj.owner}\nFor: ${orderObj.day}\nTotal: ${formatMoney(total)} SAR\n\nItems:\n${itemsText}` };
+      fetch(DISCORD_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(r=>{ if(!r.ok) console.warn('Webhook returned non-OK', r.status); }).catch(err=>{ console.warn('Webhook send error (likely CORS). Consider using server-side forwarding.', err); }); }
 
-    // TICKET PREVIEW & PRINT (customers)
-    function buildTicketHtml(orderObj){
-      const total = (orderObj.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0);
-      const itemsHtml = (orderObj.items||[]).map(it=>`<li>${escapeHtml(it.name)} x ${it.qty} — ${it.price} SAR</li>`).join('');
+    function buildTicketHtml(orderObj){ const total = (orderObj.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0); const itemsHtml = (orderObj.items||[]).map(it=>`<li>${escapeHtml(it.name)} x ${it.qty} — ${it.price} SAR</li>`).join('');
       return `
-        <div class="ticket">
+        <div class="ticket" id="previewTicket">
           <h3>Food Order Ticket</h3>
           <div style="font-weight:700">Order #: ${orderObj.number}</div>
           <div class="small">By: ${escapeHtml(orderObj.owner)}</div>
@@ -392,29 +513,13 @@
       `;
     }
 
-    function showTicketPreview(orderObj){
-      const pa = $('printArea'); pa.style.display = 'block'; pa.innerHTML = buildTicketHtml(orderObj);
-      setTimeout(()=>{ const btn = $('printTicketBtn'); if(btn) btn.onclick = ()=>{ window.print(); setTimeout(()=>{ pa.style.display='none'; pa.innerHTML=''; },500); }; },50);
+    function showTicketPreview(orderObj){ const pa = $('printArea'); pa.style.display = 'block'; pa.innerHTML = buildTicketHtml(orderObj);
+      const el = pa.querySelector('#previewTicket'); if(el){ el.animate([{ transform:'translateY(12px)', opacity:0 }, { transform:'translateY(0)', opacity:1 }], { duration:420, easing:'cubic-bezier(.2,.9,.3,1)' }); }
+      setTimeout(()=>{ const btn = $('printTicketBtn'); if(btn) { attachTactile(btn); btn.onclick = ()=>{ window.print(); setTimeout(()=>{ pa.style.display='none'; pa.innerHTML=''; },600); } } },50);
       window.scrollTo({ top:0, behavior:'smooth' });
     }
 
-    // MY ORDERS
-    function showMyOrders(){
-      if(!currentUser){ alert('Please login'); return; }
-      const ua = $('userArea'); ua.innerHTML = '';
-      const wrapper = document.createElement('section'); wrapper.className = 'card fade-in';
-      wrapper.innerHTML = `<h3>My Orders</h3><div id="ordersList" class="orders-list small">Loading...</div>`;
-      ua.appendChild(wrapper);
-      const listEl = $('ordersList');
-      const ref = db.ref('users/' + escapeKey(currentUser.name) + '/orders');
-      ref.on('value', snap=>{
-        const v = snap.val(); listEl.innerHTML = '';
-        if(!v){ listEl.innerHTML = '<div class="small">No orders yet.</div>'; return; }
-        const arr = Object.entries(v).sort((a,b)=>(a[1].number||0)-(b[1].number||0));
-        arr.forEach(([id, ord])=>{
-          const total = (ord.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0);
-          const block = document.createElement('div'); block.className = 'order-card';
-          block.innerHTML = `
+    function showMyOrders(){ if(!currentUser){ alert('Please login'); return; } const ua = $('userArea'); ua.innerHTML = ''; const wrapper = document.createElement('section'); wrapper.className = 'card fade-in'; wrapper.innerHTML = `<h3>My Orders</h3><div id="ordersList" class="orders-list small">Loading...</div>`; ua.appendChild(wrapper); const listEl = $('ordersList'); const ref = db.ref('users/' + escapeKey(currentUser.name) + '/orders'); ref.on('value', snap=>{ const v = snap.val(); listEl.innerHTML = ''; if(!v){ listEl.innerHTML = '<div class="small">No orders yet.</div>'; return; } const arr = Object.entries(v).sort((a,b)=>(a[1].number||0)-(b[1].number||0)); arr.forEach(([id, ord])=>{ const total = (ord.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0); const block = document.createElement('div'); block.className = 'order-card'; block.innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div><strong>Order #${ord.number}</strong><div class="small">Status: ${escapeHtml(ord.status)} — For: ${escapeHtml(ord.day || '')}</div></div>
               <div class="right-align">
@@ -423,38 +528,36 @@
               </div>
             </div>
             <div class="small" style="margin-top:8px">Items:<ul>${(ord.items||[]).map(i=>`<li>${escapeHtml(i.name)} x ${i.qty} — ${i.price} SAR</li>`).join('')}</ul></div>
-          `;
-          listEl.appendChild(block);
-        });
+          `; listEl.appendChild(block);
+          block.animate([{ transform:'translateY(8px)', opacity:0 }, { transform:'translateY(0)', opacity:1 }], { duration:360, easing:'cubic-bezier(.2,.9,.3,1)' }); });
 
-        // wire print buttons
-        document.querySelectorAll('button.printMe').forEach(b=>{
-          b.onclick = e=>{
-            const id = e.target.getAttribute('data-id');
-            db.ref('users/' + escapeKey(currentUser.name) + '/orders/' + id).once('value').then(snap=>{
-              const ord = snap.val(); if(!ord) return;
-              const pa = $('printArea'); pa.style.display='block'; pa.innerHTML = buildTicketHtml(ord);
-              setTimeout(()=>{ window.print(); setTimeout(()=>{ pa.style.display='none'; pa.innerHTML=''; },500); },300);
-            });
-          };
-        });
+        setTimeout(()=>{ document.querySelectorAll('button.printMe').forEach(b=>{ attachTactile(b); b.onclick = e=>{ const id = e.target.getAttribute('data-id'); db.ref('users/' + escapeKey(currentUser.name) + '/orders/' + id).once('value').then(snap=>{ const ord = snap.val(); if(!ord) return; const pa = $('printArea'); pa.style.display='block'; pa.innerHTML = buildTicketHtml(ord); setTimeout(()=>{ window.print(); setTimeout(()=>{ pa.style.display='none'; pa.innerHTML=''; },600); },300); }); }; }); },20);
       });
     }
 
-    // small toast
     function showMessage(msg){
-      const t = document.createElement('div'); t.style.position='fixed'; t.style.right='18px'; t.style.bottom='110px';
-      t.style.background='linear-gradient(90deg,#0ea5a4,#7c3aed)'; t.style.color='white'; t.style.padding='10px 12px';
-      t.style.borderRadius='8px'; t.style.boxShadow='0 8px 26px rgba(2,6,23,0.12)'; t.style.zIndex=99999; t.textContent = msg;
-      document.body.appendChild(t); setTimeout(()=> t.style.opacity='0', 2200); setTimeout(()=> t.remove(), 2600);
+      const t = document.createElement('div');
+      t.style.position='fixed';
+      t.style.right='18px';
+      t.style.bottom='110px';
+      t.style.background='linear-gradient(90deg,#0ea5a4,#7c3aed)';
+      t.style.color='white';
+      t.style.padding='12px 14px';
+      t.style.borderRadius='12px';
+      t.style.boxShadow='0 12px 40px rgba(2,6,23,0.14)';
+      t.style.zIndex=99999;
+      t.style.fontWeight='800';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      t.animate([{ transform:'translateY(12px)', opacity:0 }, { transform:'translateY(0)', opacity:1 }], { duration:360, easing:'cubic-bezier(.2,.9,.3,1)' });
+      setTimeout(()=> t.style.opacity='0', 2400);
+      setTimeout(()=> t.remove(), 2800);
     }
 
-    // Install / Tutorial UI
     function openInstallTutorial(){
-      // create modal
       const backdrop = document.createElement('div'); backdrop.className='modal-backdrop'; backdrop.id='installModal';
       backdrop.innerHTML = `
-        <div class="modal">
+        <div class="modal" role="dialog" aria-modal="true">
           <button class="close-x" id="closeInstall">✕</button>
           <h3>Add to Home Screen</h3>
           <p class="small">Install this web app to open it quickly from your device home screen.</p>
@@ -463,11 +566,11 @@
             <button id="showSteps" class="btn ghost">Show steps (iOS)</button>
           </div>
           <div style="margin-top:12px;font-size:0.95rem">
-            <div class="small"><strong>Android (Chrome):</strong> If your device supports it, tap "Install" above to use the native prompt. If nothing happens, use the browser menu → Add to home screen.</div>
+            <div class="small"><strong>Android (Chrome):</strong> Tap "Install" above if the prompt is available. Otherwise use the browser menu → Add to home screen.</div>
           </div>
           <div style="margin-top:10px">
             <strong>iOS (Safari):</strong>
-            <ol class="steps small" id="iosSteps" style="display:none">
+            <ol class="steps small" id="iosSteps" style="display:none;margin-top:8px">
               <li>Tap the Safari Share button (square with arrow).</li>
               <li>Choose "Add to Home Screen".</li>
               <li>Tap "Add" — the app will appear on your home screen.</li>
@@ -477,10 +580,10 @@
       `;
       document.body.appendChild(backdrop);
       document.getElementById('closeInstall').onclick = ()=>backdrop.remove();
-      document.getElementById('showSteps').onclick = ()=>{
-        const s = document.getElementById('iosSteps'); s.style.display = s.style.display === 'none' ? 'block' : 'none';
-      };
-      document.getElementById('doInstall').onclick = async ()=>{
+      document.getElementById('showSteps').onclick = ()=>{ const s = document.getElementById('iosSteps'); s.style.display = s.style.display === 'none' ? 'block' : 'none'; };
+      const doInstallBtn = document.getElementById('doInstall');
+      attachTactile(doInstallBtn);
+      doInstallBtn.onclick = async ()=>{
         if(deferredPrompt){
           deferredPrompt.prompt();
           const choice = await deferredPrompt.userChoice;
@@ -489,12 +592,42 @@
           deferredPrompt = null;
           backdrop.remove();
         } else {
-          // fallback: show native message telling user what to do
           alert('If your browser supports it, use the browser menu and select "Add to home screen". On iOS, open Safari → Share → "Add to Home Screen".');
         }
       };
     }
+
+    function showFirstTimeTutorialIfNeeded(){
+      try { if (localStorage.getItem('fo_seen_tutorial')) return; } catch(e){}
+      const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop'; backdrop.id = 'ftTutorialModal';
+      backdrop.innerHTML = `
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ftTutorialTitle">
+          <button class="close-x" id="closeFtTutorial">✕</button>
+          <h3 id="ftTutorialTitle">Welcome — Quick Tutorial</h3>
+          <p class="small">Welcome to the animated food ordering demo. Tap items to select; press Order to place your order. Use "Add to Home" to install.</p>
+          <div id="tutorialContent" style="margin-top:10px"></div>
+          <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+            <button id="ftDontShow" class="btn ghost">Don't show again</button>
+            <button id="ftGotIt" class="btn">Got it</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
+      const removeModal = (markSeen = true) => { if (markSeen) { try { localStorage.setItem('fo_seen_tutorial', '1'); } catch(e){} } const el = document.getElementById('ftTutorialModal'); if (el) el.remove(); };
+      document.getElementById('closeFtTutorial').onclick = () => removeModal(true);
+      document.getElementById('ftGotIt').onclick = () => removeModal(true);
+      document.getElementById('ftDontShow').onclick = () => removeModal(true);
+      backdrop.addEventListener('click', (ev) => { if (ev.target === backdrop) removeModal(true); });
+      attachTactile(document.getElementById('ftGotIt'));
+      attachTactile(document.getElementById('ftDontShow'));
+    }
+
+    function animateEntrance(){
+      const g = document.createElement('div'); g.className = 'hero-deco'; g.innerHTML = `<svg viewBox="0 0 400 200" width="400" height="200" class="floaty"><defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#0ea5a4"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs><circle cx="60" cy="40" r="36" fill="url(#g1)"/></svg>`; document.body.appendChild(g);
+      const items = document.querySelectorAll('.grid .menu-item');
+      items.forEach((it, idx)=>{ setTimeout(()=>{ it.style.opacity=1; it.style.transform='none'; it.classList.add('enter'); }, idx*90); });
+      setTimeout(()=> showFirstTimeTutorialIfNeeded(), 900);
+    }
   </script>
-  <h2>MADE BY ZEYAD HATEM</h2>
 </body>
 </html>
