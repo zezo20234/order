@@ -257,8 +257,6 @@
   <!-- Top-center banner that reads "Made by Zeyad" -->
   <div id="zeyadBanner" aria-hidden="true">Made by Zeyad</div>
 
-  <button id="btnAddHome" title="Add to home screen">➕ Add to Home</button>
-
   <div class="wrap">
     <header>
       <div style="position:relative">
@@ -371,13 +369,11 @@
       $('btnAuth').onclick = authFlow;
       $('btnMyOrders').onclick = showMyOrders;
       $('btnLogout').onclick = ()=>{ localStorage.removeItem('fo_user'); currentUser=null; updateAuthUI(); showMessage('Logged out'); };
-      $('btnAddHome').onclick = openInstallTutorial;
-
       // tactile attach for existing buttons
       document.querySelectorAll('.btn').forEach(b => attachTactile(b));
 
       if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').then(reg => { console.log('SW registered', reg); }).catch(err => console.warn('SW reg failed', err)); }
-      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; $('btnAddHome').textContent = '▸ Install App'; });
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
 
       // keep hero deco parallax but DO NOT show order summary on scroll
       window.addEventListener('scroll', ()=>{ const deco = document.querySelector('.hero-deco'); if(!deco) return; const t = Math.min(60, window.scrollY/6); deco.style.transform = `translateY(${t}px) translateZ(0)`; });
@@ -630,7 +626,7 @@
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ftTutorialTitle">
           <button class="close-x" id="closeFtTutorial">✕</button>
           <h3 id="ftTutorialTitle">Welcome — Quick Tutorial</h3>
-           <p class="small">(First time only) — <h1>READ ME</h1> welcome to the website made by zeyad to order food from zuhair online i already know that soon nobody will care about this restraunt stuff but i just wanted to make it first click the login/create button up on the right to make an account now you can order you pick what day of the week you want it make sure to not put the same day you are in and also click on my orders after you have ordered and you can see your ticket if it is accepted or declined and you can even print it print it to give on the order day if u dont have a printer you can just say 1 more thing you can turn this website into something like an app i know that it works on ios but not sure of android but anyways to do it click share button if on google the three dots then click add to home screen thats it.</p>
+           <p class="small">(First time only) — READ ME welcome to the website made by zeyad to order food from zuhair online i already know that soon nobody will care about this restraunt stuff but i just wanted to make it first click the login/create button up on the right to make an account now you can order you pick what day of the week you want it make sure to not put the same day you are in and also click on my orders after you have ordered and you can see your ticket if it is accepted or declined and you can even print it print it to give on the order day if u dont have a printer you can just say 1 more thing you can turn this website into something like an app i know that it works on ios but not sure of android but anyways to do it click share button if on google the three dots then click add to home screen thats it.</p>
           <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
             <button id="ftDontShow" class="btn ghost">Don't show again</button>
             <button id="ftGotIt" class="btn">Got it</button>
