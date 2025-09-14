@@ -292,6 +292,19 @@
       .btn{ padding:12px 18px; font-size:1rem }
       .menu-item{ padding:16px }
     }
+
+    /* Rating modal styles */
+    .rating-modal-backdrop{ position:fixed; inset:0; background:rgba(2,6,23,0.44); display:flex; align-items:center; justify-content:center; z-index:12000; opacity:0; pointer-events:none; transition:opacity 240ms ease; }
+    .rating-modal-backdrop.visible{ opacity:1; pointer-events:auto; }
+    .rating-modal{ width:92%; max-width:420px; border-radius:14px; padding:18px; background:linear-gradient(180deg,#fff,#f8fdff); box-shadow:0 40px 100px rgba(2,6,23,0.24); border:1px solid rgba(0,0,0,0.04); transform:translateY(18px); transition:transform 260ms cubic-bezier(.2,.9,.3,1); }
+    .rating-modal-backdrop.visible .rating-modal{ transform:none; }
+    .stars{ display:flex; gap:8px; justify-content:center; align-items:center; font-size:30px }
+    .star-btn{ background:transparent; border:0; font-size:32px; cursor:pointer; padding:6px; border-radius:8px; transition: transform 180ms ease; }
+    .star-btn:hover{ transform:translateY(-4px) scale(1.06); }
+    .star-btn.selected{ filter: drop-shadow(0 10px 30px rgba(14,30,70,0.12)); }
+    .rating-note{ margin-top:10px; font-size:0.95rem; color:var(--muted); text-align:center }
+    .rating-actions{ display:flex; gap:8px; justify-content:center; margin-top:14px }
+    .rating-comment{ width:100%; min-height:72px; border-radius:10px; padding:10px; border:1px solid rgba(15,23,42,0.06); resize:vertical }
   </style>
 </head>
 <body>
@@ -544,6 +557,13 @@
         db.ref().update(updates).then(()=>{
           showMessage('Order placed — #' + number);
           showTicketPreview(orderObj);
+
+          // NEW: show rating prompt after order placed
+          // small delay to ensure ticket preview is visible, then show rating modal
+          setTimeout(()=> {
+            showRatingModal(orderId, orderObj);
+          }, 700);
+
           // clear selections and UI
           selections = {};
           document.querySelectorAll('.menu-item.selected').forEach(el => el.classList.remove('selected'));
@@ -679,6 +699,84 @@
       items.forEach((it, idx)=>{ setTimeout(()=>{ it.style.opacity=1; it.style.transform='none'; it.classList.add('enter'); }, idx*90); });
       setTimeout(()=> showFirstTimeTutorialIfNeeded(), 900);
     }
+
+    /* ----------------------
+       RATING MODAL LOGIC
+       ---------------------- */
+    function showRatingModal(orderId, orderObj){
+      // create backdrop if not exists
+      let backdrop = document.querySelector('.rating-modal-backdrop');
+      if(backdrop) backdrop.remove();
+
+      backdrop = document.createElement('div'); backdrop.className = 'rating-modal-backdrop visible';
+      backdrop.innerHTML = `
+        <div class="rating-modal" role="dialog" aria-modal="true" aria-labelledby="ratingTitle">
+          <h3 id="ratingTitle">How was your order?</h3>
+          <p class="rating-note">Tap a star to rate. (5 = excellent)</p>
+          <div class="stars" id="ratingStars">
+            <button class="star-btn" data-value="1" aria-label="1 star">☆</button>
+            <button class="star-btn" data-value="2" aria-label="2 stars">☆</button>
+            <button class="star-btn" data-value="3" aria-label="3 stars">☆</button>
+            <button class="star-btn" data-value="4" aria-label="4 stars">☆</button>
+            <button class="star-btn" data-value="5" aria-label="5 stars">☆</button>
+          </div>
+          <textarea id="ratingComment" class="rating-comment" placeholder="Optional feedback (taste, delivery, etc.)"></textarea>
+          <div class="rating-actions">
+            <button id="skipRating" class="btn ghost">Skip</button>
+            <button id="submitRating" class="btn" disabled>Submit</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(backdrop);
+
+      const stars = backdrop.querySelectorAll('.star-btn');
+      let selected = 0;
+
+      const setVisual = (n) => {
+        stars.forEach(s => {
+          const v = Number(s.dataset.value);
+          if(v <= n){ s.classList.add('selected'); s.textContent = '★'; } else { s.classList.remove('selected'); s.textContent = '☆'; }
+        });
+        const submit = $('submitRating'); if(submit) submit.disabled = (n === 0);
+      };
+
+      stars.forEach(s => {
+        attachTactile(s);
+        s.addEventListener('click', (e) => {
+          selected = Number(s.dataset.value);
+          setVisual(selected);
+        });
+        s.addEventListener('mouseover', (e) => {
+          const v = Number(s.dataset.value);
+          setVisual(v);
+        });
+        s.addEventListener('mouseleave', () => { setVisual(selected); });
+      });
+
+      attachTactile($('skipRating'));
+      attachTactile($('submitRating'));
+
+      $('skipRating').onclick = () => { backdrop.remove(); showMessage('Thanks — maybe next time!'); };
+
+      $('submitRating').onclick = () => {
+        const comment = $('ratingComment').value || '';
+        if(selected <= 0){ alert('Please pick a star rating (1-5) or Skip.'); return; }
+        const ratingObj = { orderId: orderId, by: currentUser ? currentUser.name : 'anonymous', rating: selected, comment: comment, createdAt: firebase.database.ServerValue.TIMESTAMP };
+        const newRef = db.ref('ratings/' + orderId);
+        newRef.set(ratingObj).then(()=>{
+          backdrop.remove();
+          showMessage('Thanks for your feedback!');
+        }).catch(err=>{
+          alert('Could not save rating: ' + err.message);
+        });
+      };
+
+      // keep modal visible class for animation
+      setTimeout(()=> { backdrop.classList.add('visible'); }, 20);
+    }
+
+    // End of rating modal logic
   </script>
 </body>
 </html>
