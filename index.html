@@ -46,6 +46,29 @@
       -webkit-tap-highlight-color: rgba(0,0,0,0);
     }
 
+    /* MADE BY ZEYAD BANNER (fixed top-center) */
+    #zeyadBanner{
+      position:fixed;
+      left:50%;
+      top: calc(10px + var(--safe-top));
+      transform: translateX(-50%);
+      z-index: 20000;
+      pointer-events: none; /* won't block clicks */
+      background: linear-gradient(90deg, rgba(14,165,132,0.98), rgba(124,58,237,0.98));
+      color: #fff;
+      font-weight: 900;
+      padding: 10px 18px;
+      border-radius: 999px;
+      box-shadow: 0 18px 48px rgba(2,6,23,0.18), 0 6px 18px rgba(0,210,255,0.06);
+      font-size: clamp(1.1rem, 5vw, 2rem);
+      letter-spacing: 0.6px;
+      text-transform: none;
+      -webkit-font-smoothing:antialiased;
+      display:inline-block;
+      white-space:nowrap;
+    }
+    @media (prefers-reduced-motion: reduce){ #zeyadBanner { transition: none; } }
+
     .wrap{max-width:980px;margin:20px auto;padding:16px; padding-top: calc(16px + var(--safe-top));}
     header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; gap:12px;flex-wrap:wrap}
     h1{font-size:1.15rem;margin:0;display:flex;align-items:center;gap:10px;line-height:1.05}
@@ -231,6 +254,9 @@
   </style>
 </head>
 <body>
+  <!-- Top-center banner that reads "Made by Zeyad" -->
+  <div id="zeyadBanner" aria-hidden="true">Made by Zeyad</div>
+
   <button id="btnAddHome" title="Add to home screen">➕ Add to Home</button>
 
   <div class="wrap">
@@ -604,7 +630,7 @@
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ftTutorialTitle">
           <button class="close-x" id="closeFtTutorial">✕</button>
           <h3 id="ftTutorialTitle">Welcome — Quick Tutorial</h3>
-           <p class="small">(First time only) — <h1>READ ME</h1> welcome to the website made by Zeyad to order food from zuhair online i already know that soon nobody will care about this restraunt stuff but i just wanted to make it first click the login/create button up on the right to make an account now you can order you pick what day of the week you want it make sure to not put the same day you are in and also click on my orders after you have ordered and you can see your ticket if it is accepted or declined and you can even print it print it to give on the order day if u dont have a printer you can just say 1 more thing you can turn this website into something like an app i know that it works on ios but not sure of android but anyways to do it click share button if on google the three dots then click add to home screen thats it.</p>
+           <p class="small">(First time only) — <h1>READ ME</h1> welcome to the website made by zeyad to order food from zuhair online i already know that soon nobody will care about this restraunt stuff but i just wanted to make it first click the login/create button up on the right to make an account now you can order you pick what day of the week you want it make sure to not put the same day you are in and also click on my orders after you have ordered and you can see your ticket if it is accepted or declined and you can even print it print it to give on the order day if u dont have a printer you can just say 1 more thing you can turn this website into something like an app i know that it works on ios but not sure of android but anyways to do it click share button if on google the three dots then click add to home screen thats it.</p>
           <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
             <button id="ftDontShow" class="btn ghost">Don't show again</button>
             <button id="ftGotIt" class="btn">Got it</button>
