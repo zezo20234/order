@@ -184,6 +184,11 @@
 
     .menu-item > .content { position: relative; z-index: 2; }
 
+    /* item photo & left badge */
+    .item-row{ display:flex; gap:12px; align-items:center; }
+    .item-photo{ width:72px; height:72px; border-radius:10px; object-fit:cover; flex-shrink:0; border:1px solid rgba(15,23,42,0.04); box-shadow: 0 8px 26px rgba(2,6,23,0.04); }
+    .left-badge{ position:absolute; left:12px; top:10px; background:linear-gradient(90deg,#ffb020,#ff6b00); color:white; padding:6px 8px; border-radius:999px; font-weight:900; font-size:0.75rem; z-index:4; box-shadow:0 8px 20px rgba(0,0,0,0.12); }
+
     /* sticky order summary - slide + fade smoothly */
     .order-summary{
       position:fixed;
@@ -376,7 +381,11 @@
       { id:'Shay', name:'Shay', price:15 },
       { id:'Mashawe', name:'Mashawe', price:40 },
       { id:'Fries', name:'Fries (NEW)', price:15 },
-      { id:'Burger', name:'Burger', price:25 }
+      { id:'Burger', name:'Burger', price:25 },
+
+      // NEW product added as requested:
+      // name: "1 LEFT", photo: min.jpg, price: 30, currency label: "REAL RIYAL"
+      { id: 'OneLeft', name: '1 LEFT', price: 30, currency: 'REAL RIYAL', img: 'min.jpg', left: 1 }
     ];
     let selections = {};
     let currentUser = null;
@@ -414,7 +423,7 @@
       el.addEventListener('mouseleave', upNow);
       el.addEventListener('touchcancel', upNow);
 
-      el.addEventListener('keydown', (e)=>{ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); downNow(); }});
+      el.addEventListener('keydown', (e)=>{ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); downNow(); }}); 
       el.addEventListener('keyup', (e)=>{ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); upNow(); el.click && el.click(); }});
     }
 
@@ -434,7 +443,15 @@
       window.addEventListener('scroll', ()=>{ const deco = document.querySelector('.hero-deco'); if(!deco) return; const t = Math.min(60, window.scrollY/6); deco.style.transform = `translateY(${t}px) translateZ(0)`; });
     });
 
-    // render menu (NO checkboxes) - clicking toggles selection; selection shows blue glow
+    // helper: determine currency label for current selection (fallback SAR)
+    function getSelectedCurrency(){
+      const ids = Object.keys(selections);
+      if(ids.length === 0) return 'SAR';
+      const first = MENU.find(m => m.id === ids[0]);
+      return (first && first.currency) ? first.currency : 'SAR';
+    }
+
+    // render menu (with images and "left" badge if present)
     function renderMenu(){
       const grid = $('menuGrid'); grid.innerHTML = '';
       MENU.forEach((item, idx) => {
@@ -444,19 +461,29 @@
         card.setAttribute('tabindex','0');
         card.dataset.id = item.id;
 
+        // build inner html including photo (if provided) and left badge
+        const photoHtml = item.img ? `<img src="${escapeHtml(item.img)}" alt="${escapeHtml(item.name)}" class="item-photo">` : '';
+        const leftBadgeHtml = item.left ? `<div class="left-badge">${escapeHtml(item.left.toString())} LEFT</div>` : '';
+
         card.innerHTML = `
+          ${leftBadgeHtml}
           <div class="content">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <div class="item-name">${escapeHtml(item.name)}</div>
-                <div class="small">Fresh & tasty</div>
-              </div>
-              <div style="text-align:right">
-                <div class="price">${item.price} SAR</div>
-                <div class="small" style="margin-top:6px">Tap to choose</div>
+            <div class="item-row">
+              ${photoHtml}
+              <div style="flex:1">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div>
+                    <div class="item-name">${escapeHtml(item.name)}</div>
+                    <div class="small">Fresh & tasty</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div class="price">${formatMoney(item.price)} ${escapeHtml(item.currency || 'SAR')}</div>
+                    <div class="small" style="margin-top:6px">Tap to choose</div>
+                  </div>
+                </div>
+                <div style="height:8px"></div>
               </div>
             </div>
-            <div style="height:8px"></div>
           </div>
           <div class="inner-highlight"></div>
         `;
@@ -491,9 +518,10 @@
         const it = MENU.find(m => m.id === id);
         return s + (it ? it.price : 0);
       }, 0);
-      const selCount = $('selCount'); const selTotal = $('selTotal');
+      const selCount = $('selCount'); const selTotal = $('selTotal'); const selCurrency = $('selCurrency');
       if(selCount) selCount.textContent = count;
       if(selTotal) selTotal.textContent = formatMoney(total);
+      if(selCurrency) selCurrency.textContent = getSelectedCurrency();
       const orderBtn = $('btnOrderNow'); if(orderBtn) orderBtn.disabled = (count === 0);
 
       // show/hide the sticky summary immediately based on selection count (CSS handles smooth slide/fade)
@@ -516,7 +544,7 @@
       ss.innerHTML = `
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:10px"><span class="small">Selected:</span> <strong id="selCount" class="count-badge">0</strong></div>
-          <div style="display:flex;align-items:center;gap:8px"><span class="small">Total:</span> <strong id="selTotal">0</strong> SAR</div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="small">Total:</span> <strong id="selTotal">0</strong> <span id="selCurrency">SAR</span></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button id="btnOrderNow" class="btn btn-animated">Order</button>
@@ -540,9 +568,10 @@
       const ids = Object.keys(selections);
       if(ids.length === 0){ alert('Select at least one item'); return; }
       const chosenDay = askDay(); if(!chosenDay){ alert('Order cancelled (no day selected).'); return; }
-      const items = ids.map(id=>{ const it = MENU.find(m=>m.id===id); return { id: it.id, name: it.name, price: it.price, qty: 1 }; });
+      const items = ids.map(id=>{ const it = MENU.find(m=>m.id===id); return { id: it.id, name: it.name, price: it.price, qty: 1, currency: it.currency || 'SAR' }; });
       const total = items.reduce((s,it)=> s + (it.price * it.qty), 0);
-      if(!confirm(`Confirm order for ${items.length} item(s) on ${chosenDay}. Total: ${formatMoney(total)} SAR?`)) return;
+      const displayCurrency = items.length ? (items[0].currency || 'SAR') : 'SAR';
+      if(!confirm(`Confirm order for ${items.length} item(s) on ${chosenDay}. Total: ${formatMoney(total)} ${displayCurrency}?`)) return;
 
       tryPlay($('paySound'));
 
@@ -551,7 +580,7 @@
         if(err || !committed){ alert('Could not create order number. Try again.'); return; }
         const number = snap.val();
         const orderId = 'order_' + number + '_' + Date.now();
-        const orderObj = { number: number, owner: currentUser.name, items: items, day: chosenDay, status: 'pending', createdAt: firebase.database.ServerValue.TIMESTAMP };
+        const orderObj = { number: number, owner: currentUser.name, items: items, day: chosenDay, status: 'pending', createdAt: firebase.database.ServerValue.TIMESTAMP, currency: displayCurrency };
         const updates = {};
         updates['/orders/' + orderId] = orderObj;
         updates['/users/' + escapeKey(currentUser.name) + '/orders/' + orderId] = orderObj;
@@ -575,11 +604,11 @@
     }
 
     function sendDiscordWebhook(orderObj, number, total){ if(!DISCORD_WEBHOOK || DISCORD_WEBHOOK.includes('REPLACE_WITH')) { console.warn('Discord webhook not configured.'); return; }
-      const itemsText = (orderObj.items||[]).map(i=>`${i.name} x${i.qty} (${i.price} SAR)`).join('\n');
-      const payload = { content: `📣 New order placed — #${number}\nBy: ${orderObj.owner}\nFor: ${orderObj.day}\nTotal: ${formatMoney(total)} SAR\n\nItems:\n${itemsText}` };
+      const itemsText = (orderObj.items||[]).map(i=>`${i.name} x${i.qty} (${i.price} ${orderObj.currency||'SAR'})`).join('\n');
+      const payload = { content: `📣 New order placed — #${number}\nBy: ${orderObj.owner}\nFor: ${orderObj.day}\nTotal: ${formatMoney(total)} ${orderObj.currency||'SAR'}\n\nItems:\n${itemsText}` };
       fetch(DISCORD_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(r=>{ if(!r.ok) console.warn('Webhook returned non-OK', r.status); }).catch(err=>{ console.warn('Webhook send error (likely CORS). Consider using server-side forwarding.', err); }); }
 
-    function buildTicketHtml(orderObj){ const total = (orderObj.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0); const itemsHtml = (orderObj.items||[]).map(it=>`<li>${escapeHtml(it.name)} x ${it.qty} — ${it.price} SAR</li>`).join('');
+    function buildTicketHtml(orderObj){ const total = (orderObj.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0); const itemsHtml = (orderObj.items||[]).map(it=>`<li>${escapeHtml(it.name)} x ${it.qty} — ${it.price} ${escapeHtml(it.currency || orderObj.currency || 'SAR')}</li>`).join('');
       return `
         <div class="ticket" id="previewTicket">
           <h3>Food Order Ticket</h3>
@@ -589,7 +618,7 @@
           <div style="height:8px"></div>
           <div><strong>Items</strong></div>
           <ul style="margin:8px 0 0 18px;color:#111827">${itemsHtml}</ul>
-          <div style="margin-top:8px"><strong>Total: ${formatMoney(total)} SAR</strong></div>
+          <div style="margin-top:8px"><strong>Total: ${formatMoney(total)} ${escapeHtml(orderObj.currency || 'SAR')}</strong></div>
           <div style="margin-top:10px;display:flex;justify-content:flex-end">
             <button id="printTicketBtn" class="btn">Print Ticket</button>
           </div>
@@ -625,11 +654,11 @@
                 <div class="small">Status: ${escapeHtml(ord.status)} — For: ${escapeHtml(ord.day || '')}</div>
               </div>
               <div class="right-align">
-                <div class="small">Total: ${formatMoney(total)} SAR</div>
+                <div class="small">Total: ${formatMoney(total)} ${escapeHtml(ord.currency || 'SAR')}</div>
                 <div style="margin-top:6px"><button class="btn printMe" data-id="${id}">Print Ticket</button></div>
               </div>
             </div>
-            <div class="small" style="margin-top:8px">Items:<ul>${(ord.items||[]).map(i=>`<li>${escapeHtml(i.name)} x ${i.qty} — ${i.price} SAR</li>`).join('')}</ul></div>
+            <div class="small" style="margin-top:8px">Items:<ul>${(ord.items||[]).map(i=>`<li>${escapeHtml(i.name)} x ${i.qty} — ${i.price} ${escapeHtml(i.currency || ord.currency || 'SAR')}</li>`).join('')}</ul></div>
           `;
           listEl.appendChild(block);
           block.animate([{ transform:'translateY(8px)', opacity:0 }, { transform:'translateY(0)', opacity:1 }], { duration:360, easing:'cubic-bezier(.2,.9,.3,1)' });
