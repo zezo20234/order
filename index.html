@@ -18,7 +18,7 @@
        --------------------------- */
     :root{
       --accent: #0ea5a4; --accent-2: #7c3aed; --muted: #6b7280; --card:#ffffff;
-      --glass: rgba(0,0,0,0.04);
+      --glass: rgba(255,255,255,0.06);
       --dur-fast: 240ms; --dur-med: 480ms; --dur-slow: 920ms;
       --press-down: 420ms;  /* slower down press */
       --press-up: 700ms;    /* slower up release */
@@ -87,8 +87,8 @@
 
     /* MENU ITEM (acts like a button) */
     .menu-item{
-      display:flex;flex-direction:column;gap:10px;border-radius:14px;padding:14px;border:1px solid rgba(15,23,42,0.02); background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.56));
-      backdrop-filter: blur(6px); transition: transform var(--dur-med) cubic-bezier(.2,.9,.3,1), box-shadow var(--dur-med), border-color var(--dur-med);
+      display:flex;flex-direction:column;gap:10px;border-radius:14px;padding:14px;border:1px solid rgba(15,23,42,0.02); background: linear-gradient(180deg, rgba(255,255,255,0.56), rgba(255,255,255,0.28));
+      backdrop-filter: blur(8px) saturate(1.05); transition: transform var(--dur-med) cubic-bezier(.2,.9,.3,1), box-shadow var(--dur-med), border-color var(--dur-med);
       position:relative; overflow:visible; cursor:pointer; touch-action:manipulation;
       will-change: transform, box-shadow;
       min-height:84px;
@@ -105,17 +105,25 @@
     .btn{
       -webkit-user-select:none; user-select:none;
       display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      border:0;color:white;padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800; font-size:1rem;
-      box-shadow:0 10px 30px rgba(14,30,70,0.10); transition: transform var(--press-up) cubic-bezier(.2,.9,.3,1), box-shadow var(--press-up), filter var(--press-up);
-      background:linear-gradient(90deg,var(--accent),var(--accent-2)); transform-origin:center;
-      will-change: transform;
+      border:1px solid rgba(255,255,255,0.08); color:rgba(255,255,255,0.95); padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800; font-size:1rem;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.06);
+      transition: transform var(--press-up) cubic-bezier(.2,.9,.3,1), box-shadow var(--press-up), filter var(--press-up), background var(--press-up);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      backdrop-filter: blur(8px) saturate(1.1);
+      transform-origin:center;
+      will-change: transform, backdrop-filter;
       touch-action: manipulation;
+      position:relative; overflow:hidden;
     }
-    .btn.ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--accent);font-weight:800;box-shadow:none}
+    /* transparent variant */
+    .btn.ghost{ background: linear-gradient(180deg, rgba(255,255,255,0.00), rgba(255,255,255,0.00)); border:1px solid rgba(15,23,42,0.06); color:var(--accent); font-weight:800; box-shadow:none }
+
+    .btn::after{ /* subtle glass border inner shine */ content:""; position:absolute; inset:0; border-radius:12px; pointer-events:none; mix-blend-mode:overlay; background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.00)); }
 
     .btn.pressed{
       animation: btnDown var(--press-down) cubic-bezier(.25,.85,.25,1) forwards;
-      box-shadow: 0 6px 18px rgba(14,30,70,0.08);
+      box-shadow: 0 6px 18px rgba(14,30,70,0.04);
+      filter: brightness(.98);
     }
     .btn.pressed.up{
       animation: btnUp var(--press-up) cubic-bezier(.22,.9,.28,1) forwards;
@@ -157,6 +165,8 @@
       z-index: 3;
       border: 2px solid rgba(0,210,255,0.22);
       box-shadow: 0 24px 60px rgba(0,210,255,0.10);
+      transform: translateY(-6px) scale(1.01);
+      transition: transform 320ms cubic-bezier(.2,.9,.3,1), box-shadow 320ms;
     }
 
     .menu-item.selected::before{
@@ -184,10 +194,12 @@
 
     .menu-item > .content { position: relative; z-index: 2; }
 
-    /* item photo & left badge */
-    .item-row{ display:flex; gap:12px; align-items:center; }
-    .item-photo{ width:72px; height:72px; border-radius:10px; object-fit:cover; flex-shrink:0; border:1px solid rgba(15,23,42,0.04); box-shadow: 0 8px 26px rgba(2,6,23,0.04); }
-    .left-badge{ position:absolute; left:12px; top:10px; background:linear-gradient(90deg,#ffb020,#ff6b00); color:white; padding:6px 8px; border-radius:999px; font-weight:900; font-size:0.75rem; z-index:4; box-shadow:0 8px 20px rgba(0,0,0,0.12); }
+    /* subtle float animation for menu items */
+    .menu-item { transform: translateZ(0); }
+    .menu-item:hover{ transform: translateY(-6px) rotate(-0.4deg) scale(1.004); box-shadow: 0 26px 60px rgba(2,6,23,0.06); }
+
+    /* ripple for buttons */
+    .ripple{ position:absolute; border-radius:50%; transform:scale(0); opacity:0.6; pointer-events:none; }
 
     /* sticky order summary - slide + fade smoothly */
     .order-summary{
@@ -202,7 +214,7 @@
       align-items:center;
       padding:16px;
       border-radius:18px;
-      background:linear-gradient(180deg,#ffffff, #f3fdff);
+      background:linear-gradient(180deg,rgba(255,255,255,0.70), rgba(243,253,255,0.80));
       border:1px solid rgba(0,210,255,0.10);
       box-shadow: 0 36px 90px rgba(0,210,255,0.06);
       transition:
@@ -381,11 +393,7 @@
       { id:'Shay', name:'Shay', price:15 },
       { id:'Mashawe', name:'Mashawe', price:40 },
       { id:'Fries', name:'Fries (NEW)', price:15 },
-      { id:'Burger', name:'Burger', price:25 },
-
-      // NEW product added as requested:
-      // name: "1 LEFT", photo: min.jpg, price: 30, currency label: "REAL RIYAL"
-      { id: 'PICKAXE', name: 'Minecraft pickaxe', price: 30, currency: 'REAL RIYAL', img: 'min.jpg', left: 1 }
+      { id:'Burger', name:'Burger', price:25 }
     ];
     let selections = {};
     let currentUser = null;
@@ -423,8 +431,27 @@
       el.addEventListener('mouseleave', upNow);
       el.addEventListener('touchcancel', upNow);
 
-      el.addEventListener('keydown', (e)=>{ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); downNow(); }}); 
+      el.addEventListener('keydown', (e)=>{ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); downNow(); }});
       el.addEventListener('keyup', (e)=>{ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); upNow(); el.click && el.click(); }});
+
+      // create ripple container for clickable things
+      if(!el.querySelector('.ripple-container')){
+        const rc = document.createElement('span'); rc.className = 'ripple-container'; rc.style.position='absolute'; rc.style.inset='0'; rc.style.overflow='hidden'; rc.style.borderRadius = getComputedStyle(el).borderRadius || '12px'; rc.style.pointerEvents='none'; el.appendChild(rc);
+      }
+
+      el.addEventListener('click', (ev)=>{
+        const rc = el.querySelector('.ripple-container'); if(!rc) return;
+        const r = document.createElement('span'); r.className = 'ripple';
+        const size = Math.max(el.offsetWidth, el.offsetHeight) * 1.1;
+        r.style.width = r.style.height = size + 'px';
+        const rect = el.getBoundingClientRect();
+        const x = (ev.clientX || rect.left + rect.width/2) - rect.left - size/2;
+        const y = (ev.clientY || rect.top + rect.height/2) - rect.top - size/2;
+        r.style.left = x + 'px'; r.style.top = y + 'px'; r.style.background = 'radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 40%, transparent 60%)';
+        rc.appendChild(r);
+        r.animate([{ transform: 'scale(0)', opacity:0.8 }, { transform: 'scale(1)', opacity:0 }], { duration: 520, easing: 'cubic-bezier(.2,.9,.3,1)' });
+        setTimeout(()=> r.remove(), 600);
+      });
     }
 
     document.addEventListener('DOMContentLoaded', ()=>{
@@ -443,15 +470,7 @@
       window.addEventListener('scroll', ()=>{ const deco = document.querySelector('.hero-deco'); if(!deco) return; const t = Math.min(60, window.scrollY/6); deco.style.transform = `translateY(${t}px) translateZ(0)`; });
     });
 
-    // helper: determine currency label for current selection (fallback SAR)
-    function getSelectedCurrency(){
-      const ids = Object.keys(selections);
-      if(ids.length === 0) return 'SAR';
-      const first = MENU.find(m => m.id === ids[0]);
-      return (first && first.currency) ? first.currency : 'SAR';
-    }
-
-    // render menu (with images and "left" badge if present)
+    // render menu (NO checkboxes) - clicking toggles selection; selection shows blue glow
     function renderMenu(){
       const grid = $('menuGrid'); grid.innerHTML = '';
       MENU.forEach((item, idx) => {
@@ -461,40 +480,34 @@
         card.setAttribute('tabindex','0');
         card.dataset.id = item.id;
 
-        // build inner html including photo (if provided) and left badge
-        const photoHtml = item.img ? `<img src="${escapeHtml(item.img)}" alt="${escapeHtml(item.name)}" class="item-photo">` : '';
-        const leftBadgeHtml = item.left ? `<div class="left-badge">${escapeHtml(item.left.toString())} LEFT</div>` : '';
-
         card.innerHTML = `
-          ${leftBadgeHtml}
           <div class="content">
-            <div class="item-row">
-              ${photoHtml}
-              <div style="flex:1">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <div>
-                    <div class="item-name">${escapeHtml(item.name)}</div>
-                    <div class="small">Fresh & tasty</div>
-                  </div>
-                  <div style="text-align:right">
-                    <div class="price">${formatMoney(item.price)} ${escapeHtml(item.currency || 'SAR')}</div>
-                    <div class="small" style="margin-top:6px">Tap to choose</div>
-                  </div>
-                </div>
-                <div style="height:8px"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div class="item-name">${escapeHtml(item.name)}</div>
+                <div class="small">Fresh & tasty</div>
+              </div>
+              <div style="text-align:right">
+                <div class="price">${item.price} SAR</div>
+                <div class="small" style="margin-top:6px">Tap to choose</div>
               </div>
             </div>
+            <div style="height:8px"></div>
           </div>
           <div class="inner-highlight"></div>
         `;
 
         grid.appendChild(card);
 
-        // entrance stagger
-        setTimeout(()=> { card.classList.add('enter'); card.style.opacity = 1; card.style.transform = 'none'; }, idx * 80);
+        // entrance stagger + float animation delay
+        setTimeout(()=> { card.classList.add('enter'); card.style.opacity = 1; card.style.transform = 'none'; card.style.animation = `floaty ${(6 + (idx % 3))}s ease-in-out ${idx*40}ms infinite`; }, idx * 80);
 
         // tactile press feel
         attachTactile(card);
+
+        // keyboard accessible hover effect
+        card.addEventListener('focus', ()=> card.classList.add('hover-focus'));
+        card.addEventListener('blur', ()=> card.classList.remove('hover-focus'));
 
         // toggle selection (multi-select)
         card.addEventListener('click', () => {
@@ -503,14 +516,23 @@
           if(isSelected){
             delete selections[id];
             card.classList.remove('selected');
+            card.style.transform = '';
           } else {
             selections[id] = true;
             card.classList.add('selected');
+            // tiny pop animation
+            card.animate([{ transform: 'scale(0.995) translateY(6px)' }, { transform: 'scale(1.01) translateY(-6px)' }, { transform: 'scale(1) translateY(0)' }], { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1)' });
           }
           updateStickySummary();
         });
+
       });
     }
+
+    // subtle floating keyframes (only for transform property to keep perf good)
+    const styleSheet = document.createElement('style');
+    styleSheet.innerHTML = `@keyframes floaty { 0%{transform:translateY(0)} 50%{transform:translateY(-6px)} 100%{transform:translateY(0)} }`;
+    document.head.appendChild(styleSheet);
 
     function updateStickySummary(){
       const count = Object.keys(selections).length;
@@ -518,10 +540,9 @@
         const it = MENU.find(m => m.id === id);
         return s + (it ? it.price : 0);
       }, 0);
-      const selCount = $('selCount'); const selTotal = $('selTotal'); const selCurrency = $('selCurrency');
+      const selCount = $('selCount'); const selTotal = $('selTotal');
       if(selCount) selCount.textContent = count;
       if(selTotal) selTotal.textContent = formatMoney(total);
-      if(selCurrency) selCurrency.textContent = getSelectedCurrency();
       const orderBtn = $('btnOrderNow'); if(orderBtn) orderBtn.disabled = (count === 0);
 
       // show/hide the sticky summary immediately based on selection count (CSS handles smooth slide/fade)
@@ -544,7 +565,7 @@
       ss.innerHTML = `
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:10px"><span class="small">Selected:</span> <strong id="selCount" class="count-badge">0</strong></div>
-          <div style="display:flex;align-items:center;gap:8px"><span class="small">Total:</span> <strong id="selTotal">0</strong> <span id="selCurrency">SAR</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="small">Total:</span> <strong id="selTotal">0</strong> SAR</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button id="btnOrderNow" class="btn btn-animated">Order</button>
@@ -568,10 +589,9 @@
       const ids = Object.keys(selections);
       if(ids.length === 0){ alert('Select at least one item'); return; }
       const chosenDay = askDay(); if(!chosenDay){ alert('Order cancelled (no day selected).'); return; }
-      const items = ids.map(id=>{ const it = MENU.find(m=>m.id===id); return { id: it.id, name: it.name, price: it.price, qty: 1, currency: it.currency || 'SAR' }; });
+      const items = ids.map(id=>{ const it = MENU.find(m=>m.id===id); return { id: it.id, name: it.name, price: it.price, qty: 1 }; });
       const total = items.reduce((s,it)=> s + (it.price * it.qty), 0);
-      const displayCurrency = items.length ? (items[0].currency || 'SAR') : 'SAR';
-      if(!confirm(`Confirm order for ${items.length} item(s) on ${chosenDay}. Total: ${formatMoney(total)} ${displayCurrency}?`)) return;
+      if(!confirm(`Confirm order for ${items.length} item(s) on ${chosenDay}. Total: ${formatMoney(total)} SAR?`)) return;
 
       tryPlay($('paySound'));
 
@@ -580,7 +600,7 @@
         if(err || !committed){ alert('Could not create order number. Try again.'); return; }
         const number = snap.val();
         const orderId = 'order_' + number + '_' + Date.now();
-        const orderObj = { number: number, owner: currentUser.name, items: items, day: chosenDay, status: 'pending', createdAt: firebase.database.ServerValue.TIMESTAMP, currency: displayCurrency };
+        const orderObj = { number: number, owner: currentUser.name, items: items, day: chosenDay, status: 'pending', createdAt: firebase.database.ServerValue.TIMESTAMP };
         const updates = {};
         updates['/orders/' + orderId] = orderObj;
         updates['/users/' + escapeKey(currentUser.name) + '/orders/' + orderId] = orderObj;
@@ -604,11 +624,11 @@
     }
 
     function sendDiscordWebhook(orderObj, number, total){ if(!DISCORD_WEBHOOK || DISCORD_WEBHOOK.includes('REPLACE_WITH')) { console.warn('Discord webhook not configured.'); return; }
-      const itemsText = (orderObj.items||[]).map(i=>`${i.name} x${i.qty} (${i.price} ${orderObj.currency||'SAR'})`).join('\n');
-      const payload = { content: `📣 New order placed — #${number}\nBy: ${orderObj.owner}\nFor: ${orderObj.day}\nTotal: ${formatMoney(total)} ${orderObj.currency||'SAR'}\n\nItems:\n${itemsText}` };
+      const itemsText = (orderObj.items||[]).map(i=>`${i.name} x${i.qty} (${i.price} SAR)`).join('\n');
+      const payload = { content: `📣 New order placed — #${number}\nBy: ${orderObj.owner}\nFor: ${orderObj.day}\nTotal: ${formatMoney(total)} SAR\n\nItems:\n${itemsText}` };
       fetch(DISCORD_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(r=>{ if(!r.ok) console.warn('Webhook returned non-OK', r.status); }).catch(err=>{ console.warn('Webhook send error (likely CORS). Consider using server-side forwarding.', err); }); }
 
-    function buildTicketHtml(orderObj){ const total = (orderObj.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0); const itemsHtml = (orderObj.items||[]).map(it=>`<li>${escapeHtml(it.name)} x ${it.qty} — ${it.price} ${escapeHtml(it.currency || orderObj.currency || 'SAR')}</li>`).join('');
+    function buildTicketHtml(orderObj){ const total = (orderObj.items||[]).reduce((s,it)=> s + (it.price * it.qty), 0); const itemsHtml = (orderObj.items||[]).map(it=>`<li>${escapeHtml(it.name)} x ${it.qty} — ${it.price} SAR</li>`).join('');
       return `
         <div class="ticket" id="previewTicket">
           <h3>Food Order Ticket</h3>
@@ -618,7 +638,7 @@
           <div style="height:8px"></div>
           <div><strong>Items</strong></div>
           <ul style="margin:8px 0 0 18px;color:#111827">${itemsHtml}</ul>
-          <div style="margin-top:8px"><strong>Total: ${formatMoney(total)} ${escapeHtml(orderObj.currency || 'SAR')}</strong></div>
+          <div style="margin-top:8px"><strong>Total: ${formatMoney(total)} SAR</strong></div>
           <div style="margin-top:10px;display:flex;justify-content:flex-end">
             <button id="printTicketBtn" class="btn">Print Ticket</button>
           </div>
@@ -654,11 +674,11 @@
                 <div class="small">Status: ${escapeHtml(ord.status)} — For: ${escapeHtml(ord.day || '')}</div>
               </div>
               <div class="right-align">
-                <div class="small">Total: ${formatMoney(total)} ${escapeHtml(ord.currency || 'SAR')}</div>
+                <div class="small">Total: ${formatMoney(total)} SAR</div>
                 <div style="margin-top:6px"><button class="btn printMe" data-id="${id}">Print Ticket</button></div>
               </div>
             </div>
-            <div class="small" style="margin-top:8px">Items:<ul>${(ord.items||[]).map(i=>`<li>${escapeHtml(i.name)} x ${i.qty} — ${i.price} ${escapeHtml(i.currency || ord.currency || 'SAR')}</li>`).join('')}</ul></div>
+            <div class="small" style="margin-top:8px">Items:<ul>${(ord.items||[]).map(i=>`<li>${escapeHtml(i.name)} x ${i.qty} — ${i.price} SAR</li>`).join('')}</ul></div>
           `;
           listEl.appendChild(block);
           block.animate([{ transform:'translateY(8px)', opacity:0 }, { transform:'translateY(0)', opacity:1 }], { duration:360, easing:'cubic-bezier(.2,.9,.3,1)' });
